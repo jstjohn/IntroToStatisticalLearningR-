@@ -1,5 +1,10 @@
 # History files
 .Rhistory
+*.md
+*.Md
+*.html
+*.png
+*figure/*
 
 # Example code in package build process
 *-Ex.R

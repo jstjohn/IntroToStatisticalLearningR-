@@ -1,0 +1,141 @@
+Introduction to Statistical Learning Exercise 1
+========================================================
+
+
+Conceptual
+---
+
+1. **_In general, do we expect the performance of a flexible statistical learning method to perform better or worse than an inflexible method when:_**
+  1. **_The sample size n is extremely large, and the number of predictors p is small?_** In this case, since we have so much data, I would expect that a more flexible model would perform better.
+  2. **_p is extremely large, and n is small?_** In this case, we are very prone to overfitting, a more inflexible method is much preffered.
+  3. **_relationship between predictors and response is highly non-linear?_** In this case, inflexible methods might force an unwarented linearity on the data, and underfit, so more flexible methods would be appropriate.
+  4. **_variance of the error terms is extremely high?_** In this case, highly flexible methods would be prone to fitting the error, and perform worse than less flexible methods.
+2. **_Explain whether each scenario is a classification or regression problem, and indicate whether we are most interested in inference or prediction. Finally, provide n and p._** Note that inference is how Y changes as a function of X, while prediction is determining what Y is given X. 
+  1. **_We collect a set of data on the top 500 firms in the US. For each firm we record profit, number of employees, industry and the CEO salary. We are interested in understanding which factors affect CEO salary._** This is an inference problem, we want to know how various variables effect salary, rather than simply being able to predict salary. We are inferring relationships to a continuous variable, so it is regression rather than classification. `n = 500, p = 3` (I think the 4th variable, CEO salary, being the output we want to predict, is not counted in p)
+  2. **_We are considering launching a new product and wish to know whether it will be a success or a failure. We collect data on 20 similar products that were previously launched. For each product we have recorded whether it was a success or failure, price charged for the product, marketing budget, competition price, and ten other variables._** This is a prediction problem, we only care about whether the outcome is success or failure. The outcome is binary, so this is a classification problem. `n = 20, p = 10+3 = 13` And one more for the outcome variable, which I am not counting in `p`.
+  3. **_We are interesting in predicting the % change in the US dollar in relation to the weekly changes in the world stock markets. Hence we collect weekly data for all of 2012. For each week we record the % change in the dollar, the % change in the US market, the % change in the British market, and the % change in the German market._** This is an inference problem, we want to know the relationship between the US dollar and weekly changes in the world stock market. We are predicting a continuous variable, so it is a prediction problem. 
+3. **_We now revisit the bias-variance decomposition._**
+  1. **_Provide a sketch of typical (squared) bias, variance, training error, test error, and Bayes (or irreducible) error curves, on a sin- gle plot, as we go from less flexible statistical learning methods towards more flexible approaches. The x-axis should represent the amount of flexibility in the method, and the y-axis should represent the values for each curve. There should be five curves. Make sure to label each one._** I am just going to describe what I would draw here. First off the Bayes error curve is easy. This is simply the costant horizontal line representing the Variance around the optimal decision boundary. This doesn't change for a given underlying true datagenerating function. The squared bias is going to decrease until it hits a minimum and then stay there, the variance will then take over and the more flexible methods will be fitting variance, which is going to start low, then go up in frequency. The training error is going to drop and get very low as flexiblilty increases, however the testing error is going to have a U shape, starting high probably, dropping down to some optimal minimum, then rising again as the more flexible models begin to overfit to the underlying variance in the training set. 
+  2. **_Explain why each of the five curves has the shape displayed in part (1)._** See previous description that also had explanations.
+4. **_You will now think of some real-life applications for statistical learning_**
+  1. **_Describe three real-life applications in which classification might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer._** a) Predicting stock price gain vs loss, stock price gain or loss, daily news + twitter + other features, prediction. b) Determining which genes have expression that is useful for determining response to a drug, drug response or no response, gene expression levels for all genes, inference. c) Predicting which links a user will click on, success or failure of click, user history, context of add, etc, prediction. 
+  2. **_Describe three real-life applications in which regression might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer._** a) Predicting stock price change amplitude, stock price change, daily news + twitter + other features, prediction. b) Determining which genes have expression that is useful that correlate with PFS, expression correlation to PFS, gene expression levels for all genes, inference. c) Predicting what market price a house will sell for, house value in dolars, neighborhood + schools + other recent sales of similar homes in area, prediction.
+  3. **_Describe three real-life applications in which cluster analysis might be useful._** a) identify cancer sub-types and what genes drive those, classification, inference. b) identify web usage outlier weeks, web usage over each week, prediction c) identify groups of users that might have similar behaviour that is distinct in some useful way from other users, behaviour data of some sort, inference.
+5. **_What are the advantages and disadvantages of a very flexible (versus a less flexible) approach for regression or classification? Under what circumstances might a more flexible approach be preferred to a less flexible approach? When might a less flexible approach be preferred?_** More flexible approaches tend to be more useful for prediction than inference. Inference requires knowledge of how the result is a function of the data, Prediction can be a black box. Also more flexible methods are required when the underlying data varries significantly from linear assumptions.
+6. **_Describe the differences between a parametric and a non-parametric statistical learning approach. What are the advantages of a para- metric approach to regression or classification (as opposed to a non- parametric approach)? What are its disadvantages?_** Parametric approaches do not have as much of an issue with overfitting. They are more resitrictive, but as a result fewer observations of underlying data are required to fit them fairly well. Nonparametric methods are sometimes required when the underlying data is very different from what can be fit with parametric techniques, or when the underlying distribution is unknown but obviously not normally distributed.
+7. **_The table below provides a training data set containing 6 observations, 3 predictors, and 1 qualitative response variable. Suppose we wish to use this data set to make a prediction for Y when X1 = X2 = X3 = 0 using K-nearest neighbors._**
+  1. **_Compute the Euclidean distance between each observation and the test point, X1=X2=X3=0._** euclidian distance is `sqrt((x1-x2)^2+...)`. 1) 0-0 0-3 0-0 = sqrt(9) = 3 2) 2 3) sqrt(10) = 3.16 4) sqrt(5) = 2.24 5) sqrt(2) = 1.141 6) sqrt(5) = 2.24
+  2. **_What is our prediction with K = 1? Why?_** just the closest point which is point 5, that has class Green.
+  3. **_What is our prediction with K = 3? Why?_** average of 3 closest points, 5,2, and 4/6 are equidistant, so include them both I guess. I have actually just searched this, the R version of KNN includes all ties by default, or chooses randomly K points when there are ties, and other methods simply do K-1,K-2 and so on until no more ties exist. I will do the R version (3 Red + 2Green) = Red
+  4. **_If the Bayes decision boundary in this problem is highly nonlinear, then would we expect the best value for K to be large or small? Why?_** The higher K is the closer the decision boundary is to being linear. Lower K can fit more irregular data like this.
+
+Applied
+--------
+
+8. 
+  1. up until part 3. 
+```{r}
+college=read.csv("~/src/IntroToStatisticalLearningR/data/College.csv")
+rownames(college) <- college[,1]
+college <- college[,-1]
+summary(college)
+```
+Show a pairs plot
+
+```{r fig.width=7, fig.height=6}
+pairs(college[,1:10])
+```
+```{r}
+Elite=rep("No",nrow(college))
+Elite[college$Top10perc >50]="Yes"
+Elite=as.factor(Elite)
+college=data.frame(college,Elite)
+summary(Elite)
+```
+Elite college vs Outstate tuition
+```{r fig.width=7, fig.height=6}
+plot(college$Elite, college$Outstate)
+```
+Some histograms of different variables
+```{r fig.width=7, fig.height=6}
+par(mfrow=c(2,2))
+hist(college$PhD)
+hist(college$Accept)
+hist(college$Enroll)
+hist(college$S.F.Ratio)
+```
+Hmm, lets plot enrollment vs applications by elite status
+```{r fig.width=7, fig.height=6}
+par(mfrow=c(1,2))
+plot(college$Enroll[college$Elite == 'Yes'], college$Apps[college$Elite == 'Yes'], main="Elite")
+plot(college$Enroll[college$Elite == 'No'], college$Apps[college$Elite == 'No'], main="Not Elite")
+```
+And with ratios
+```{r fig.width=7, fig.height=6}
+par(mfrow=c(1,2))
+hist(college$Enroll[college$Elite == 'Yes']/college$Apps[college$Elite == 'Yes'], main="Elite")
+hist(college$Enroll[college$Elite == 'No']/college$Apps[college$Elite == 'No'], main="Not Elite")
+```
+Doesn't seem to be the strongest signal with enrollment vs application number vs elite status.
+
+9.
+```{r}
+Auto = read.table("~/src/IntroToStatisticalLearningR/data/Auto.data", head=T, na.strings="?")
+Auto <- na.omit(Auto)
+summary(Auto)
+```
+  1. mpg, cylinders, displacement, horsepower, weight, acceleration, are quantative. origin, year, and name are qualitative. 
+  2. mpg: 9-46, cylinders: 3-8, displacement: 68-455, horsepower: 46-230, weight:1613-5140, acceleration:8-24.8
+  3. means: `r apply(Auto[,1:6],2,mean)`, sds: `r apply(Auto[,1:6],2,sd)`
+  4. range: `r apply(Auto[-(10:85),1:6],2,range)` means: `r apply(Auto[,1:6],2,mean)`, sds: `r apply(Auto[,1:6],2,sd)`
+  5. 
+```{r fig.width=11, fig.height=11}
+pairs(Auto)
+```
+  I like the association with acceleration and year, the interesting thing is that it has the same trend as mpg and year. It basically seems that cars are becoming both more efficient, and simultaniously more fun, on average at least.
+
+6. It looks like some linear combination of year, acceleration, and maybe one of displacement, horsepower or weight would combine to be a pretty good predictor. I would probably chose weight acceleration year as the three inputs.
+
+
+10. 
+```{r}
+library(MASS)
+dim(Boston)
+summary(Boston)
+#?Boston
+```
+  1. There are 506 rows by 14 columns in the Boston dataset
+  2. 
+
+```{r fig.width=11, fig.height=11}
+pairs(Boston)
+```
+One interesting tidbit, as the proportion of black people goes up, the pupil teacher ratio goes down (more pupils per teacher)
+
+  3.  As the proportion of owner occupied units built prior to 1940 goes up, crime rate also goes up
+  4. 
+
+```{r fig.width=11, fig.height=11}
+par(mfrow=c(2,2))
+hist(Boston$crim, main="Crime Rates")
+hist(Boston$tax, main="Tax Rates")
+hist(Boston$ptratio, main="Pupil Teacher Ratio")
+library(scatterplot3d)
+scatterplot3d(log(Boston$crim),Boston$tax,Boston$ptratio,main="Boston Crime, Tax vs Pupil Teacher Ratio")
+```
+Most areas of boston have low crime rates, however a small number of areas in boston have very high crime rates, that variable exponentially declines. Tax rates are clearly bimodal. The highest tax rates are very seperate from the lower tax rates. The pupil teacher ratio seems to be normally distributed except for a handful of areas with very high pt ratios. 
+  5. `r sum(Boston$chas)` suburbs border the boston river.
+  6. `r median(Boston$ptratio)` is the median pupil teacher ratio
+  7. These are the suburbs with the lowest median value of owner-occupied homes.
+```{r}
+subset(Boston, medv == min(medv))
+```
+
+  8. `r dim(subset(Boston, rm > 7))[1]` suburbs average more than 7 rooms per dwelling.
+  9. 
+```{r}
+library(plyr)
+Boston$O8 <- factor(ifelse(Boston$rm > 8, 1, 0))
+ddply(Boston, .(O8), summary )
+```
+  Median crime is slightly higher in these over 8 room neighboorhods, but the mean is lower. Tax is also lower. pt ratio is lower in both mean and median. median value of homes the mean value of home is way higher. the age is also higher which seems interesting. These appear to be expensive, old neighborhoods. Proportion of non-retail business is substantially lower as well, these seem to be more residential in nature.

@@ -1,0 +1,121 @@
+Introduction to Statistical Learning R Lab 1
+========================================================
+
+Here is an example of making a randomly correlated variable:
+
+```{r}
+x=rnorm(50)
+y=x+rnorm(50, mean=50, sd=.1)
+cor(x,y)
+```
+
+And here is a visualization of this correlation
+
+```{r fig.width=7, fig.height=6}
+plot(x,y)
+```
+
+Here is a sequence of 60 numbers between -pi and pi
+```{r}
+x=seq(-pi,pi,length=50)
+```
+
+Now exploring contour
+
+```{r fig.width=7, fig.height=6}
+y=x
+f=outer(x,y,function(x,y)cos(y)/(1+x^2))
+contour(x,y,f)
+contour(x,y,f,nlevels=45,add=T)
+```
+
+And another contor figure, this time with a new transform of the data
+
+```{r fig.width=7, fig.height=6}
+fa=(f-t(f))/2
+contour(x,y,f,nlevels=15)
+```
+
+We can also do this with an "image" plot to show a heatmap
+```{r fig.width=7, fig.height=6}
+image(x,y,fa)
+```
+
+Or a 3d perspective plot
+```{r fig.width=7, fig.height=6}
+persp(x,y,fa)
+```
+
+Which can be rotated, I think, with theta
+```{r fig.width=7, fig.height=6}
+persp(x,y,fa, theta=30)
+```
+
+And further rotated with phi
+```{r fig.width=7, fig.height=6}
+persp(x,y,fa, theta=30, phi=20)
+```
+
+Another angle at phi=70
+
+```{r fig.width=7, fig.height=6}
+persp(x,y,fa, theta=30, phi=70)
+```
+
+And once again with phi=40
+```{r fig.width=7, fig.height=6}
+persp(x,y,fa, theta=30, phi=40)
+```
+
+
+Loading data
+--------
+
+Here are different ways to load data into R. interesting use of the `fix()` command which loads the data into a spreadsheet like window. I commented this out because it blocks execution and doesn't put anything into the result, but it looks like a spreadsheet page.
+
+```{r}
+Auto=read.table("~/src/IntroToStatisticalLearningR/data/Auto.data",header=T,na.strings="?")
+dim(Auto)
+Auto=na.omit(Auto)
+dim(Auto)
+
+```
+
+You can also attach data so that it is easier to plot and whatnot, turning cylindars into a dataframe makes the output a little nicer, a boxplot actually!
+
+```{r fig.width=7, fig.height=6}
+attach(Auto)
+cylinders=as.factor(cylinders)
+plot(cylinders, mpg)
+```
+
+Lets slap some lipstick on this plot!
+```{r fig.width=7, fig.height=6}
+plot(cylinders, mpg, col="red", varwidth=T, xlab="cylinders ", ylab="MPG")
+```
+
+And we can do a histogram on this variable as well. `col=2` is the same as `col="red"` btw.
+```{r fig.width=7, fig.height=6}
+hist(mpg,col=2,breaks=15)
+```
+
+We could also do a pairs plot which is really nice.
+```{r fig.width=7, fig.height=6}
+pairs(Auto)
+```
+
+And we can limit the pairing to specific variables.
+```{r fig.width=7, fig.height=6}
+pairs(~mpg + displacement + horsepower + weight + acceleration, Auto)
+```
+
+Now this is cool, you can plot variables, and then run identify. In rstudio you click on points you are interested in, then hit `ESC` on the keyboard. This will then give you a list of the points, and name the points on the figure! Cant show it here.
+
+```
+plot(horsepower, mpg)
+identify(horsepower,mpg,name)
+```
+
+
+FIN!
+
