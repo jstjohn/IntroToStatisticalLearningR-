@@ -1,5 +1,7 @@
 # History files
 .Rhistory
+.Rdata
+*.Rproj
 *.md
 *.Md
 *.html
