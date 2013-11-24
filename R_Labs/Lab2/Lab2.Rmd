@@ -1,0 +1,163 @@
+Introduction to Statistical Learning in R Lab 2 (Chapter 3)
+========================================================
+
+Load some R libs
+
+```{r}
+library(MASS)
+library(ISLR)
+lm.fit=lm(medv~lstat,data=Boston)
+summary(lm.fit)
+```
+
+Show some QC figures on this lm fit to the data. As expected there is a very significant correlation between median value of homes in a neighborhood, and proportion of the population that is lower status. There is a lot of interesting stuff here. For example we see that there are some points with high leverage that are also nearly 3 on the residuals axis. Not sure what absolute values of leverage are considered really high, I will need to look into the chapter more deeply for that. Looks like Cook's distance doesn't come into play, would those be the particularly dangerous points? Perhaps that is the key determinate.
+
+```{r fig.width=11, fig.height=11}
+par(mfrow=c(2,2))
+plot(lm.fit)
+```
+
+And we can do a confidence interval on the coefficients. Remember that confidence intervals and prediction intervals are different. Prediction intervals as we will see are more conservative.
+
+```{r}
+confint(lm.fit)
+
+predict(lm.fit,data.frame(lstat=(c(5,10,15))), interval="confidence")
+predict(lm.fit,data.frame(lstat=(c(5,10,15))), interval="prediction")
+```
+
+Here is a plot of the points, with the fitted line
+```{r fig.width=7, fig.height=5}
+plot(Boston$lstat,Boston$medv)
+abline(lm.fit, lwd=3, col="red")
+```
+
+Plot of predicted fit vs residuals and student.
+```{r fig.width=11, fig.height=5}
+par(mfrow=c(1,2))
+plot(predict(lm.fit), residuals(lm.fit), main="Residuals")
+plot(predict(lm.fit), rstudent(lm.fit), main="Student Fit")
+```
+
+There is some evidence of non-linearity based on the resudials plot. Lets look into the leverage statistic using the hatvals function.
+
+```{r fig.width=7, fig.height=5}
+plot(hatvalues(lm.fit))
+```
+
+To see which index point has the max leverage, we can use which.max to return the index of the max value.
+```{r}
+which.max(hatvalues(lm.fit))
+```
+
+Multiple Linear Regression
+--------------------------
+```{r}
+lm.fit = lm(medv~lstat+age, data=Boston)
+summary(lm.fit)
+```
+
+We can also look at all variables at the same time with this shorthand syntax.
+```{r}
+lm.fit = lm(medv~., data=Boston)
+summary(lm.fit)
+```
+
+Interesting that when we include all variables, age, which used to be significant, is no longer called that way.
+
+One cool thing is that we can access certain elements of the lm summary like so:
+```{r}
+summary(lm.fit)$r.sq
+```
+
+Also the vif function from the car package can calcualte soemthing called the "variance inflation" factor.
+```{r}
+library(car)
+vif(lm.fit)
+```
+
+Let's try a regression excluding one variable. There are two ways to do this, we can specify a new regression with the special -age syntax after the . syntax, otherwise we can use the "update" method to update the previous fit removing the age variable. We can remove multiple variables with this syntax as well.
+
+```{r}
+lm.fit1=lm(medv~.-age,data=Boston)
+summary(lm.fit1)
+lm.fit2=update(lm.fit, ~.-age)
+summary(lm.fit2)
+lm.fit3=lm(medv~.-age-indus,data=Boston)
+summary(lm.fit3)
+```
+
+And here is a plot including the significant variables identified previously (-age,-industry)
+```{r fig.width=11, fig.height=11}
+par(mfrow=c(2,2))
+plot(lm.fit3)
+```
+
+
+Interaction Terms
+----------------
+When we use `lstat*age` in the formula, the individual terms `lstat` and `age` are automatically included. So for example we can do this to explore the version of lstat and age as interactive terms.
+
+```{r}
+summary(lm(medv~lstat*age,data=Boston))
+
+```
+
+Non-linear transformations of predictors
+-------------------
+We can look at things like something squared using the `I()` function which helps when you want to use a special symbol in your equation.
+```{r}
+lm.fit2=lm(medv~lstat+I(lstat^2), data=Boston)
+summary(lm.fit2)
+```
+
+We can use the `anova()` function to further quantify how much better the quadratic fit is superior to the linear fit.
+```{r}
+lm.fit=lm(medv~lstat,data=Boston)
+anova(lm.fit,lm.fit2)
+```
+
+And here is a plot of the fits for lstat^2
+```{r fig.width=11, fig.height=11}
+par(mfrow=c(2,2))
+plot(lm.fit2)
+```
+
+We can also fit higher order polynomials using the `poly()` function, which does the work of writing out all of the decreasing polynomial terms for us given a variable, and the numbers of polynomials you want to fit. We could also do something like a log transform in the linear model
+
+```{r}
+lm.fit5=lm(medv~poly(lstat,5),data=Boston)
+summary(lm.fit5)
+summary(lm(medv~log(rm),data=Boston))
+```
+
+Qualitative Predictors
+------------------
+
+R actually automatically will create dummy variables when you have a predictor. We also add a few specific interaction terms to the full model, namely Income and Advertising, along with Price and Age.
+
+```{r}
+lm.fit=lm(Sales~.+Income:Advertising+Price:Age,data=Carseats)
+summary(lm.fit)
+```
+
+We can see what the dummy coding is for a variable using the `contrasts()` function.
+
+```{r}
+contrasts(Carseats$ShelveLoc)
+```
+
+Cool! contrasts can be set for any factor, you can use the above function to specify what the contrasts are for a given factor in a dataframe. This sounds very handy.
+
+So to interpret the output of the `lm` above with interpreting the dummy variables, keep in mind that `ShelveLocGood` being a positive and significant association represents an improvement over the default case, `ShelveLocBad`, similarly `ShelveLocMedium` represents a slightly less, yet still positive and significant improvement.
+
+
+```{r}
+LoadLibraries <- function(){
+  library(ISLR)
+  library(MASS)
+  print("The libraries have been loaded.")
+}
+LoadLibraries()
+```
+
