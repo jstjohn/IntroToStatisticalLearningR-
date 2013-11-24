@@ -10,7 +10,7 @@ lm.fit=lm(medv~lstat,data=Boston)
 summary(lm.fit)
 ```
 
-Show some QC figures on this lm fit to the data. As expected there is a very significant correlation between median value of homes in a neighborhood, and proportion of the population that is lower status. There is a lot of interesting stuff here. For example we see that there are some points with high leverage that are also nearly 3 on the residuals axis. Not sure what absolute values of leverage are considered really high, I will need to look into the chapter more deeply for that. Looks like Cook's distance doesn't come into play, would those be the particularly dangerous points? Perhaps that is the key determinate.
+Show some QC figures on this lm fit to the data. As expected there is a very significant correlation between median value of homes in a neighborhood, and proportion of the population that is lower status. There is a lot of interesting stuff here. For example we see that there are some points with high leverage that are also nearly 3 on the residuals axis. **Not sure what absolute values of leverage are considered really high, I will need to look into the chapter more deeply for that. Looks like Cook's distance doesn't come into play, would those be the particularly dangerous points? Perhaps that is the key determinate.** From earlier in the chapter, just before the section on colinearity, it says that the average value of leverage is `(p+1)/n`. Also it always varies between 0 and 1. Figure 3.13 which shows an example of a dangerous situation, has a point with a leverage of a little over 0.25. In this case we are looking at one variable, so I think `p=1 n=506` either `r 2/506` or `r 3/506` should be the mean value of the leverage. We have a few points that are around 0.025 which is an order of magnitude higher than what we should expect for the mean, not sure how significant this is though. Here are some interesting online resources: http://www.statmethods.net/stats/rdiagnostics.html
 
 ```{r fig.width=11, fig.height=11}
 par(mfrow=c(2,2))
@@ -32,7 +32,8 @@ plot(Boston$lstat,Boston$medv)
 abline(lm.fit, lwd=3, col="red")
 ```
 
-Plot of predicted fit vs residuals and student.
+Plot of predicted fit vs residuals and studentized versions. Remember that the sutentized residuals are useful for determining outliers. Studentized residuals are devided by the standard error to make something like a Z score, so you can look at `sigma` levels. Values greater than 3 on studentized residuals are poential outliers. That corresponds to 3 `sigma` I think.
+
 ```{r fig.width=11, fig.height=5}
 par(mfrow=c(1,2))
 plot(predict(lm.fit), residuals(lm.fit), main="Residuals")
@@ -70,7 +71,7 @@ One cool thing is that we can access certain elements of the lm summary like so:
 summary(lm.fit)$r.sq
 ```
 
-Also the vif function from the car package can calcualte soemthing called the "variance inflation" factor.
+Also the vif function from the car package can calcualte soemthing called the "variance inflation" factor. **How do we know what a good vs bad inflation factor is?**
 ```{r}
 library(car)
 vif(lm.fit)
