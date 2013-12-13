@@ -561,7 +561,9 @@ par(mfrow=c(2,2))
 plot(lm.fit3, main="y~x2")
 ```
 
-When we include both x1 and x2 in the model, the point does not appear to be an outlier (between 3,-3 on residuals), but does have a significant leverage value as shown on Cook's distance lines on the residuals vs leverage plot. Also its leverage value is 0.4 whic is high.
+When we include both x1 and x2 in the model, the point does not appear to be an outlier (between 3,-3 on residuals), but does have a significant leverage value as shown on Cook's distance lines on the residuals vs leverage plot. Also its leverage value is 0.4 whic is high... 
+
+Note: according to `http://www.oxfordjournals.org/our_journals/tropej/online/ma_chap5.pdf`, a cooks' distance over 1 is a potentail issue, and over 4 is cause for much concern. 
 
 When we have only x1 in the model, the point does appear to be an outlier, however it does not appear to have leverage.
 

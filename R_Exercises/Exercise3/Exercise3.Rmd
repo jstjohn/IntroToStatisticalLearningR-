@@ -1,0 +1,495 @@
+Introduction to statistical learning exercise 3
+========================================================
+# Conceptual Section
+******
+## Problem 1
+See work in ex_p1.jpg
+
+*******
+## Problem 2
+See work in ex_p2.jpg
+Also note that in answer to my question on there, yes we can remove that last term. Remember that we are maximizing (k), so we can remove any term we want that does not interact with k, and we are ok. The final term does have something to do with x, but not k, so it can be removed and the equation is still proportional. We could remove the summation term because for any particular k, it is the same, since it is a marginalization over all k.
+
+*******
+## Problem 3
+see the saved parts 1 and 2 images. The key thing here is that we can't remove the final term as we did in the previus part (the x^2/2sigma) that is now something dependent on class k, so we can't claim proportionality and remove the term when we want to identify the max.
+
+********
+## Problem 4
+See the included `ex_p4_*` jpgs. 
+
+********
+## Problem 5
+### Part a
+When the bayes decision boundary is linear (the optimal classifier) we would still predict QDA to fit the training set better since it can fit more of the error in the data. On the test set on the other hand, QDA will probably perform worse since it is modeling the error whenver it deviates from the simpler linear best fit.
+### Part b
+If the bayes decision boundary is non-linear, we would expect QDA to perform better on both the training and test set, depending on the degree of non-linearity, and the number of cases in the test set. If the number of the samples are small, or the underlying model is nearly linear, it is still possible for LDA to perform better.
+### Part c
+The test prediction accuracy of LDA and QDA should improve as n increases. Depending on the underlying model, if it is non-linear, then at some point QDA will learn things about the data that LDA can't model, and QDA will be better. On the other hand LDA will still do better if the data is modeled well by it, or n is on the smaller size. It will take a lot more observations to fit QDA equally well to LDA since QDA is quadratic and LDA is linear.
+### Part d
+TRUE: QDA can modle a linear boundary, so it will fit whatever linearness is in the training data. It can do more though, so it can additionally fit some of the additional residual error that the linear model wouldn't be able to handle as well. Thus it is superior on fittin the training data. The testing data on the other hand is a different story.
+
+*********
+## Problem 6
+### Part a
+$p(X) = \frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}$ and we have that $\hat\beta_0=-6, \hat\beta_1=0.05, \hat\beta_2=1$. This gives us $p(gets\ an\ A)=$ `r exp(-6+40*0.05+1*3.5)/(1+exp(-6+40*0.05+1*3.5))`.
+### Part b
+$log(\frac{p(X)}{1-p(X)})=\beta_0+\beta_1X+\beta_2X$ and we want $p(X)=0.5$. $log(\frac{0.5}{1-0.5})=0$. So we need to solve $\frac{6-3.5}{0.05}=hours\ required=$ `r (6-3.5)/0.05`. Indeed plugging 50 hours into the above equation comes out to `r exp(-6+50*0.05+1*3.5)/(1+exp(-6+50*0.05+1*3.5))`. Apparently 10 more hours of work would have given this student a coin toss chance at getting an A!
+
+*********
+## Problem 7
+$P(Yes|X) = \frac{P(X|Yes)P(Yes)}{P(X)}$ And we are given that $P(Yes)=0.8$, Also we can find $P(X)$ by marginalizing over the two possibilities, $Yes$ and $No$. $P(X)=P(X|Yes)P(Yes)+P(X|No)P(No)$. $P(X|Yes)=\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2}$ $x=7, \mu_{Yes}=10, \mu_{No}=0, P(Yes)=.8, P(No)=.2, \sigma^2_{Yes}=\sigma^2_{No}=36$. This gives us $P(Yes|X)=$ `r pxyes <- 1/sqrt(2*pi*36)*exp(-((7-10)**2)/(2*36)); pxno <- 1/sqrt(2*pi*36)*exp(-((7-0)**2)/(2*36)); pyes=.8; pno=.2; (pxyes*pyes)/(pxyes*pyes+pxno*pno)`.
+
+**********
+## Problem 8
+KNN with $K=1$ by design will not missclassify anything in the training set. The real test with KNN especially at the most permissive level of $K=1$ comes when you then try to classify new things. On the other hand Logistic regression fits a parametric model to the training set, so the training error provides _some_ indication of how good the fit is to the data, and a little insight into how it might perform on future data.
+
+Lets consider a dataset with 1000 examples, you divide it in half and you have 500 examples that you train on, and 500 that you test on. With KNN, $K=1$ to get an average error of 18% (180 misclassified examples of the 1000) all of these will need to be in the 500 test cases since it will not misclassify anything in the training set. This means that the test error for KNN is actually 180/500 or 36% as opposed to logistic regression which was less at 30%! KNN misclassified 180 test cases, while logisitic regression missclassified fewer cases (150) in this example.
+
+
+*************
+## Problem 9
+### Part a
+$\frac{p}{1-p}=odds$ For example given an odds of 0.37, one way to get there would be $\frac{37+}{100-}$. For probability, this would be a fraction of $\frac{37}{137}$ or 27%.
+### Part b
+odds for an event with probability $p$ are $\frac{p}{1-p}$. So if the probability is .16, then the odds for this event are `r .16/(1-.16)`.
+
+
+*************
+# Applied Section
+*************
+
+## Problem 10
+
+> This question should be answered using the Weekly data set, which is part of the ISLR package. This data is similar in nature to the Smarket data from this chapter’s lab, except that it contains 1089 weekly returns for 21 years, from the beginning of 1990 to the end of 2010.
+
+```{r}
+library(MASS)
+library(ISLR)
+```
+
+### Part a
+> Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+
+```{r fig.width=11, fig.height=11}
+pairs(Weekly)
+cor(Weekly[,-ncol(Weekly)])
+```
+
+There is high correlation between Volume and Year. This appears to be an exponential relationship where volume increases exponentially as a function of year. Certain years seem to have more or less variation than other years. Notice the violin shape of the various Lag features and the Year. There does seem to be some autocorrelation in the variability of the Lag and the year. Perhaps some years people are more skittish than other years, and this takes a while to wear off. Syclical skittishness or something. There appears to be very little if any correlation between Lag and other lags. Direction appears slightly skewed by a few of the lags, perhaps Lag5, and Lag1.
+
+### Part b
+> Use the full dataset to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?
+
+```{r}
+logit.fit = glm(Direction ~ Lag1+Lag2+Lag3+Lag4+Lag5+Volume, family=binomial, data=Weekly)
+contrasts(Weekly$Direction)
+summary(logit.fit)
+```
+
+The Lag2 varaible, and intercept, appear to be significant.
+
+### Part c
+> Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.
+
+```{r}
+glm.probs=predict(logit.fit,Weekly,type="response")
+glm.pred=rep("Down",nrow(Weekly))
+glm.pred[glm.probs > 0.50]="Up"
+table(glm.pred,Weekly$Direction)
+mean(glm.pred==Weekly$Direction)
+```
+
+The confusion matrix is telling us that the model does not fir the data particularly well. The "Up" direction is guessed most of the time. Most of the mistakes come from guessing that the market is going to go up when it really is going to go down. When Up is guessed, it is right `r 557/(430+557)` of the time, when down is guessed it is right `r 54/(54+48)` of the time.
+
+### Part d
+> Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010).
+
+```{r}
+train=Weekly$Year <= 2008
+Weekly.test=Weekly[!train,]
+logit.fit = glm(Direction ~ Lag2, family=binomial, data=Weekly, subset=train)
+contrasts(Weekly$Direction)
+summary(logit.fit)
+glm.probs=predict(logit.fit,Weekly.test,type="response")
+glm.pred=rep("Down",nrow(Weekly.test))
+glm.pred[glm.probs > 0.50]="Up"
+table(glm.pred,Weekly.test$Direction)
+mean(glm.pred==Weekly.test$Direction)
+```
+
+
+
+### Part e
+> Repeat (d) using LDA.
+
+```{r}
+lda.fit = lda(Direction ~ Lag2, data=Weekly, subset=train)
+lda.fit
+lda.class=predict(lda.fit,Weekly.test)$class
+table(lda.class,Weekly.test$Direction)
+mean(lda.class==Weekly.test$Direction)
+```
+
+This one performed identicaly to logistic regression.
+
+### Part f
+> Repeat (d) using QDA.
+
+```{r}
+qda.fit = qda(Direction ~ Lag2, data=Weekly, subset=train)
+qda.fit
+qda.class=predict(qda.fit,Weekly.test)$class
+table(qda.class,Weekly.test$Direction)
+mean(qda.class==Weekly.test$Direction)
+```
+
+Interestingly it seems that QDA overfit this variable. LDA/logistic regression performs better on the test data.
+
+### Part g
+> Repeat (d) using KNN with K = 1.
+
+```{r}
+library(class)
+train.X=Weekly[train,"Lag2",drop=F]
+test.X=Weekly[!train,"Lag2",drop=F]
+train.Direction=Weekly[train,"Direction",drop=T]
+test.Direction=Weekly[!train,"Direction",drop=T]
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=1)
+table(knn.pred,test.Direction)
+mean(knn.pred==test.Direction)
+```
+
+### Part h
+> Which of these methods appears to provide the best results on this data?
+
+KNN is totally random looking. QDA appears to overfit the data slightly more than LDA and Logistic Regression, which perform equally well on the test data.
+
+### Part i
+> Experiment with different combinations of predictors, including possible transformations and interactions, for each of the methods. Report the variables, method, and associated confusion matrix that appears to provide the best results on the held out data. Note that you should also experiment with values for K in the KNN classifier.
+
+KNN with `K=4` performs pretty well at 0.57. 
+```{r}
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=4)
+table(knn.pred,test.Direction)
+mean(knn.pred==test.Direction)
+```
+
+QDA appears to perform worse as we add in more variables, with Lag1, Lag2 and Volume it goes down to 0.46. With Lag1 and Lag2 it is a little better, at 0.55, but still Lag2 by itself is pretty good.
+```{r}
+qda.fit = qda(Direction ~ Lag2, data=Weekly, subset=train)
+qda.fit
+qda.class=predict(qda.fit,Weekly.test)$class
+table(qda.class,Weekly.test$Direction)
+mean(qda.class==Weekly.test$Direction)
+```
+
+Logistic regression also seems to perform worse with more variables thrown in. Lag2 seems to be a pretty good fit.
+
+```{r}
+train=Weekly$Year <= 2008
+Weekly.test=Weekly[!train,]
+logit.fit = glm(Direction ~ Lag1+Lag2+Volume, family=binomial, data=Weekly, subset=train)
+contrasts(Weekly$Direction)
+summary(logit.fit)
+glm.probs=predict(logit.fit,Weekly.test,type="response")
+glm.pred=rep("Down",nrow(Weekly.test))
+glm.pred[glm.probs > 0.50]="Up"
+table(glm.pred,Weekly.test$Direction)
+mean(glm.pred==Weekly.test$Direction)
+```
+
+**************
+## Problem 11
+> In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set.
+### Part a) 
+> Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function.
+
+```{r}
+library(MASS)
+library(ISLR)
+Auto$mpg01 <- ifelse(Auto$mpg > median(Auto$mpg),1,0)
+```
+
+### Part b) 
+> Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this ques- tion. Describe your findings.
+
+```{r fig.width=11,fig.height=11}
+pairs(Auto[,-9])
+```
+Horsepower, displacement, weight, and acceleration look the most promissing. However these variables are all fairly correlated/anti-correlated.
+
+### Part c) 
+> Split the data into a training set and a test set.
+
+```{r}
+set.seed(1)
+rands <- rnorm(nrow(Auto))
+test <- rands > quantile(rands,0.75)
+train <- !test
+Auto.train <- Auto[train,]
+Auto.test <- Auto[test,]
+```
+
+
+### Part d) 
+> Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+
+```{r}
+lda.fit = lda(mpg01 ~ horsepower+weight+acceleration, data=Auto.train)
+lda.fit
+lda.class=predict(lda.fit,Auto.test)$class
+table(lda.class,Auto.test$mpg01)
+mean(lda.class==Auto.test$mpg01)
+```
+LDA achieved 88.8% test accuracy.
+
+### Part e) 
+> Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+
+```{r}
+qda.fit = qda(mpg01 ~ horsepower+weight+acceleration, data=Auto.train)
+qda.fit
+qda.class=predict(qda.fit,Auto.test)$class
+table(qda.class,Auto.test$mpg01)
+mean(qda.class==Auto.test$mpg01)
+```
+QDA performed a little better, and achieved 92.9% accuracy on the test set.
+
+### Part f) 
+> Perform logistic regression on the training data in order to pre- dict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+
+```{r}
+logit.fit = glm(mpg01 ~ horsepower+weight+acceleration, family=binomial, data=Auto.train)
+summary(logit.fit)
+glm.probs=predict(logit.fit,Auto.test,type="response")
+glm.pred=rep(0,nrow(Auto.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Auto.test$mpg01)
+mean(glm.pred==Auto.test$mpg01)
+```
+Recompiling this a few times, I see that the accuracy and everything fluctuates a bit. Sometimes LDA and Logistic Regression do the same, sometimes Logistic Regression does a little worse, sometimes LDA a little better. QDA seems to fairly consistently perform the best.
+
+### Part g) 
+> Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
+
+```{r}
+set.seed(1)
+train.Auto = Auto.train[,c("horsepower","weight","acceleration")]
+test.Auto =  Auto.test[,c("horsepower","weight","acceleration")]
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=1)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=2)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=3)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=4)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=5)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+
+knn.pred=knn(train.Auto,test.Auto,Auto.train$mpg01,k=11)
+table(knn.pred,Auto.test$mpg01)
+mean(knn.pred==Auto.test$mpg01)
+```
+
+Interestingly at least in one case, KNN with K=3 outperforms all other models. K=4 and K=5 perform similarly well.
+
+************
+## Problem 12
+### Part a) 
+> Write a function, Power(), that prints out the result of raising 2 to the 3rd power. In other words, your function should compute 23 and print out the results Hint: Recall that x^a raises x to the power a. Use the print() function to output the result.
+
+```{r}
+Power <- function(){
+  print(2^3)
+}
+Power()
+```
+
+### Part b) 
+> Create a new function, Power2(), that allows you to pass any two numbers, x and a, and prints out the value of x^a. You can do this by beginning your function with the line You should be able to call your function by entering, for instance,
+`Power2(3,8)` on the command line. This should output the value of 38, namely, 6561.
+
+```{r}
+Power2 <- function(x,a){
+  print(x^a)
+}
+Power2(3,8)
+```
+
+### Part c) 
+> Using the Power2() function that you just wrote, compute 103, 817, and 1313.
+
+```{r}
+Power2(10,3)
+Power2(8,17)
+Power2(131,3)
+```
+
+### Part d) 
+> Now create a new function, Power3(), that actually returns the result x^a as an R object, rather than simply printing it to the screen. That is, if you store the value x^a in an object called result within your function, then you can simply return() this result, using the following line:
+return(result)
+The line above should be the last line in your function, before the } symbol.
+
+```{r}
+Power3 <- function(x,a){
+  return(x^a)
+}
+```
+
+### Part e) 
+> NowusingthePower3()function,createaplotoff(x)=x2.The x-axis should display a range of integers from 1 to 10, and the y-axis should display x2. Label the axes appropriately, and use an appropriate title for the figure. Consider displaying either the x-axis, the y-axis, or both on the log-scale. You can do this by using log="x", log="y", or log="xy" as arguments to the plot() function.
+
+```{r fig.width=7,fig.height=5}
+plot(seq(1,10),
+     sapply(seq(1,10), function(x) Power3(x,2)),
+     log="y",
+     main="Plotting x vs x**2",
+     xlab="x",
+     ylab="x**2")
+```
+
+### Part f) 
+> Create a function, PlotPower(), that allows you to create a plot of x against x^a for a fixed a and for a range of values of x. For instance, if you call
+> PlotPower(1:10,3)
+then a plot should be created with an x-axis taking on values 1,2,...,10, and a y-axis taking on values 13,23,...,103.
+
+```{r fig.width=7,fig.height=5}
+PlotPower <- function(x,a){
+  plot(x,
+     sapply(x, function(z) Power3(z,a)),
+     log="y",
+     main=sprintf("Plotting x vs x**%d",a),
+     xlab="x",
+     ylab=sprintf("x**%d",a))
+}
+PlotPower(1:10,3)
+```
+
+*************
+## Problem 13
+> Using the Boston data set, fit classification models in order to predict whether a given suburb has a crime rate above or below the median. Explore logistic regression, LDA, and KNN models using various subsets of the predictors. Describe your findings.
+
+```{r fig.width=11, fig.height=11}
+Boston$crim01 <- as.numeric(Boston$crim > median(Boston$crim)) 
+# as.numeric converts FALSE to 0 and TRUE to 1
+
+set.seed(1)
+rands <- rnorm(nrow(Boston))
+test <- rands > quantile(rands,0.75)
+train <- !test
+Boston.train <- Boston[train,]
+Boston.test <- Boston[test,]
+
+pairs(Boston.train)
+
+#We should explore "black"
+# "ptratio" "rad" "dis" "nox, and "zn" "lstat" "rm"
+
+########################
+# Logistic Regression
+glm.fit=glm(crim01~lstat+rm+zn+nox+dis+rad+ptratio+black+medv+age+chas+indus+tax, data=Boston.train)
+summary(glm.fit)
+#NOX,RAD,MEDV,AGE,TAX look good
+glm.probs=predict(glm.fit,Boston.test,type="response")
+glm.pred=rep(0,nrow(Boston.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Boston.test$crim01)
+mean(glm.pred==Boston.test$crim01)
+
+glm.fit=glm(crim01~nox+rad+medv+age+tax, data=Boston.train)
+summary(glm.fit)
+#NOX,RAD,MEDV,AGE,TAX look good
+glm.probs=predict(glm.fit,Boston.test,type="response")
+glm.pred=rep(0,nrow(Boston.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Boston.test$crim01)
+mean(glm.pred==Boston.test$crim01)
+
+#ptratio helps a bit
+glm.fit=glm(crim01~nox+rad+medv+age+tax+ptratio, data=Boston.train)
+summary(glm.fit)
+#NOX,RAD,MEDV,AGE,TAX look good
+glm.probs=predict(glm.fit,Boston.test,type="response")
+glm.pred=rep(0,nrow(Boston.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Boston.test$crim01)
+mean(glm.pred==Boston.test$crim01)
+
+#indus brings it back down a bit
+glm.fit=glm(crim01~nox+rad+medv+age+tax+ptratio+indus, data=Boston.train)
+summary(glm.fit)
+#NOX,RAD,MEDV,AGE,TAX look good
+glm.probs=predict(glm.fit,Boston.test,type="response")
+glm.pred=rep(0,nrow(Boston.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Boston.test$crim01)
+mean(glm.pred==Boston.test$crim01)
+
+#indus by itslef doesn't help much
+glm.fit=glm(crim01~nox+rad+medv+age+tax+indus, data=Boston.train)
+summary(glm.fit)
+#NOX,RAD,MEDV,AGE,TAX look good
+glm.probs=predict(glm.fit,Boston.test,type="response")
+glm.pred=rep(0,nrow(Boston.test))
+glm.pred[glm.probs > 0.50]=1
+table(glm.pred,Boston.test$crim01)
+mean(glm.pred==Boston.test$crim01)
+
+
+########################
+# LDA
+lda.fit=lda(crim01~nox+rad+medv+age+tax+ptratio, data=Boston.train)
+lda.fit
+#NOX,RAD,MEDV,AGE,TAX look good, ptratio seems to help also
+lda.pred=predict(lda.fit,Boston.test)$class
+table(lda.pred,Boston.test$crim01)
+mean(lda.pred==Boston.test$crim01)
+
+########################
+# KNN
+set.seed(1)
+train.Boston = Boston.train[,c("nox","rad","medv","age","tax","ptratio")]
+test.Boston =  Boston.test[,c("nox","rad","medv","age","tax","ptratio")]
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=1)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=2)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=3)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=4)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=5)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+
+knn.pred=knn(train.Boston,test.Boston,Boston.train$crim01,k=11)
+table(knn.pred,Boston.test$crim01)
+mean(knn.pred==Boston.test$crim01)
+
+
+
+```
+
+So the best I could get LDA/logistic regression was 89%. Using the features optimized with logistic regression I was able to get KNN to perform better, returning a model that got up to 92%. K=1 got to 93%, but K=3 was nearly as good, and the higher K might be more robust going forward.

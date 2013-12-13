@@ -1,0 +1,211 @@
+Introduction to Statistical Learning
+========================================================
+
+
+
+```{r}
+library(ISLR)
+names(Smarket)
+dim(Smarket)
+summary(Smarket)
+cor(Smarket[-9])
+```
+
+Plot of volume
+
+```{r fig.width=7, fig.height=6}
+attach(Smarket)
+plot(Volume)
+```
+
+
+##Logistic Regression
+```{r}
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5, data=Smarket, family=binomial)
+summary(glm.fit)
+coef(glm.fit)
+#all coefficient summaries
+summary(glm.fit)$coef
+#probabilities
+summary(glm.fit)$coef[,4]
+glm.probs=predict(glm.fit,type="response")
+glm.probs[1:10]
+contrasts(Direction)
+```
+
+Note that the p values in the probabilities are for the stock market going up, since we can see that the dummy variable reproted by `contrasts(Direction)` has 1 on `Up`, and 0 on `Down`.
+
+Come up with predictions based on this model (on the training data), and make a confusion matrix.
+```{r}
+glm.pred=rep("Down",1250)
+glm.pred[glm.probs>.5]="Up"
+table(glm.pred,Direction)
+(550+116)/1250
+mean(glm.pred==Direction)
+```
+
+However this is the training error rate, lets create a test set and try again.
+
+```{r}
+train=(Year<2005)
+Smarket.2005=Smarket[!train,]
+dim(Smarket.2005)
+Direction.2005=Direction[!train]
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket,family=binomial,subset=train)
+glm.probs=predict(glm.fit,Smarket.2005,type="response")
+glm.pred=rep("Down",252)
+glm.pred[glm.probs>0.5]="Up"
+table(glm.pred,Direction.2005)
+mean(glm.pred==Direction.2005)
+mean(glm.pred!=Direction.2005)
+```
+
+Yikes, the last line with `!=Direction.2005` computes the test error, which is worse than random chance! Oh well..
+
+Lets see what happens if we get rid of some of the lower p-value predictors in the model, those likely contribute noise.
+
+```{r}
+glm.fit=glm(Direction~Lag1+Lag2, data=Smarket,family=binomial,subset=train)
+glm.probs=predict(glm.fit,Smarket.2005,type="response")
+glm.pred=rep("Down",252)
+glm.pred[glm.probs>0.5]="Up"
+table(glm.pred,Direction.2005)
+mean(glm.pred==Direction.2005)
+mean(glm.pred!=Direction.2005)
+```
+
+To predict on some new days, say two days, you can do the following:
+```{r}
+predict(glm.fit,newdata=data.frame(Lag1=c(1.2,1.5), Lag2=c(1.1,-0.8)),type="response")
+```
+
+We would guess that the market is going to go down these days.
+
+### LDA
+```{r}
+library(MASS)
+lda.fit=lda(Direction~Lag1+Lag2,data=Smarket,subset=train)
+lda.fit
+```
+
+```{r fig.height=5, fig.width=7}
+plot(lda.fit)
+```
+
+```{r}
+lda.pred=predict(lda.fit, Smarket.2005)
+names(lda.pred)
+lda.class=lda.pred$class
+table(lda.class,Direction.2005)
+mean(lda.class==Direction.2005)
+sum(lda.pred$posterior[,1]>=.5)
+sum(lda.pred$posterior[,1]<.5)
+lda.pred$posterior[1:20,1]
+lda.class[1:20]
+sum(lda.pred$posterior[,1]>.54)
+max(lda.pred$posterior[,1])
+min(lda.pred$posterior[,1])
+```
+
+### QDA
+```{r}
+qda.fit=qda(Direction~Lag1+Lag2,data=Smarket,subset=train)
+qda.fit
+qda.class=predict(qda.fit,Smarket.2005)$class
+table(qda.class,Direction.2005)
+mean(qda.class==Direction.2005)
+```
+
+
+60% accuracy on stock market data? wow. There is no default `plot()` that takes qda.fitted results.
+
+### K-Nearest Neighbors
+```{r}
+library(class)
+train.X=cbind(Lag1,Lag2)[train,]
+test.X=cbind(Lag1,Lag2)[!train,]
+train.Direction=Direction[train]
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=1)
+table(knn.pred,Direction.2005)
+mean(knn.pred==Direction.2005)
+
+knn.pred=knn(train.X,test.X,train.Direction,k=3)
+table(knn.pred,Direction.2005)
+mean(knn.pred==Direction.2005)
+```
+
+### Caravan Insurance Data
+Caravan insurance is just insurance for caravans... Thought it might be something else for some reason.
+
+```{r}
+dim(Caravan)
+attach(Caravan)
+sp=summary(Purchase)
+sp
+sp["Yes"]/sum(sp)
+```
+
+Since KNN is based on distance, and different variables can have very different scales, things need to be scaled. Consider salary and age, salary can change in thousands easily, age will mostly range 0-100. Consider that a salary difference of 1000 should be small compared to an age difference of 50 years, need to _standardize_ the data so that KNN knows these scales.
+
+
+The scale function in R does this automagically!
+
+Col 86 is Purchase which is qualative, and will be left out for this.
+```{r}
+standardized.X=scale(Caravan[-86])
+var(Caravan[,1])
+var(Caravan[,2])
+var(standardized.X[,1])
+var(standardized.X[,2])
+
+test=1:1000
+train.X=standardized.X[-test,]
+test.X=standardized.X[test,]
+train.Y=Purchase[-test]
+test.Y=Purchase[test]
+
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Y,k=1)
+mean(test.Y!=knn.pred)
+mean(test.Y!="No")
+```
+
+Keep in mind that although 12% error sounds really good, if we just always predicted "No" we would have only 6% error. 
+
+```{r}
+table(knn.pred,test.Y)
+9/(68+9)
+
+knn.pred=knn(train.X,test.X,train.Y,k=3)
+table(knn.pred,test.Y)
+5/26
+
+knn.pred=knn(train.X,test.X,train.Y,k=5)
+table(knn.pred,test.Y)
+4/15
+
+```
+
+We could also try with logistic regression. Since there are so few positives, the predictor doesn't do so well with the default probability cutoff of 0.5 if we are hoping to identify the people we want to spend time trying to sell insurance to.
+
+```{r}
+glm.fit=glm(Purchase~.,data=Caravan,family=binomial,subset=-test)
+glm.probs=predict(glm.fit,Caravan[test,],type="response")
+glm.pred=rep("No",1000)
+glm.pred[glm.probs >.5]="Yes"
+table(glm.pred,test.Y)
+#yikes, all of our guesses on "yes" are wrong!
+
+#try with a different p cutoff
+glm.pred=rep("No",1000)
+glm.pred[glm.probs >.25]="Yes"
+table(glm.pred,test.Y)
+11/(22+11)
+```
+
+```{r fig.height=5,fig.width=7}
+plot(factor(test.Y),glm.probs)
+abline(0.25,0,col="red",lwd=2)
+```
+Probably a better plot would be one that shows the TP rate vs the FP rate or something, bet it has a dip around 0.25 or something.
