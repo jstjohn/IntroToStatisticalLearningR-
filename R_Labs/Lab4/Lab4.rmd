@@ -1,0 +1,147 @@
+Introduction to Statistical Learning Lab 4: Cross validation and the bootstrap
+========================================================
+
+*************
+## Train/Test split
+```{r}
+library(ISLR)
+set.seed(1)
+train=sample(392,196)
+lm.fit=lm(mpg~horsepower,data=Auto,subset=train)
+attach(Auto)
+mean((mpg-predict(lm.fit,Auto))[-train]^2)
+
+lm.fit2=lm(mpg~poly(horsepower,2),data=Auto,subset=train)
+mean((mpg-predict(lm.fit2,Auto))[-train]^2)
+
+lm.fit3=lm(mpg~poly(horsepower,3),data=Auto,subset=train)
+mean((mpg-predict(lm.fit3,Auto))[-train]^2)
+
+set.seed(2)
+train=sample(392,196)
+lm.fit=lm(mpg~horsepower,data=Auto,subset=train)
+mean((mpg-predict(lm.fit,Auto))[-train]^2)
+
+lm.fit2=lm(mpg~poly(horsepower,2),data=Auto,subset=train)
+mean((mpg-predict(lm.fit2,Auto))[-train]^2)
+
+lm.fit3=lm(mpg~poly(horsepower,3),data=Auto,subset=train)
+mean((mpg-predict(lm.fit3,Auto))[-train]^2)
+```
+
+Little improvement for cubic function, but quadratic improves over linear. Interesting that different test sets perform so differently.
+
+*************
+## LOOCV
+
+So glm has a nice cv function which is handy. Note that GLM can do linear models as well as a bunch of others, so it can be a drop in replacement for lm.
+
+```{r}
+glm.fit=glm(mpg~horsepower,data=Auto)
+coef(glm.fit)
+#vs
+lm.fit=lm(mpg~horsepower,data=Auto)
+coef(lm.fit)
+```
+
+cv and all for glm is part of the `boot` library.
+
+```{r}
+library(boot)
+glm.fit=glm(mpg~horsepower,data=Auto)
+cv.err=cv.glm(Auto,glm.fit)
+cv.err$delta
+```
+
+Lets use CV to find which polynomial fit is optimal for this horsepower data. Lets do this in parallelz b/c it takes a while otherwise.
+
+```{r}
+library(multicore)
+cv.error=unlist(mclapply(1:5,function(i){
+  glm.fit=glm(mpg~poly(horsepower,i),data=Auto)
+  cv.glm(Auto,glm.fit)$delta[1]
+}, mc.cores=5))
+
+cv.error
+```
+
+*************
+## K fold CV
+We can also do this with k fold cv which goes faster.
+
+```{r}
+set.seed(17)
+cv.error.10=unlist(mclapply(1:10,function(i){
+  glm.fit=glm(mpg~poly(horsepower,i),data=Auto)
+  cv.glm(Auto,glm.fit,K=10)$delta[1]
+}, mc.cores=10))
+
+cv.error.10
+```
+
+from the text, this is an interesting point about what the two $delta values mean:
+
+> We saw in Section 5.3.2 that the two numbers associated with delta are essentially the same when LOOCV is performed. When we instead perform k-fold CV, then the two numbers associated with delta differ slightly. The first is the standard k-fold CV estimate, as in (5.3). The second is a bias- corrected version. On this data set, the two estimates are very similar to each other.
+
+Also note that cv.glm does not use the computational speed up that is possible for LOOCV with least-squares fit models given in equation formula 5.2. This would have actually made LOOCV faster than K-fold CV rather than the other way around!
+
+*************
+## The bootstrap
+
+```{r}
+alpha.fn=function(data,index){
+  X=data$X[index]
+  Y=data$Y[index]
+  return((var(Y)-cov(X,Y))/(var(X)+var(Y)-2*cov(X,Y)))
+}
+#using all 100 observations to get alpha:
+alpha.fn(Portfolio,1:100)
+
+#or we can sample bootstrap style
+set.seed(1)
+alpha.fn(Portfolio,sample(100,100,replace=T))
+
+#and we can use the boot function to automate this thousands of times
+boot(Portfolio,alpha.fn,R=1000)
+```
+
+now were going to use the bootstrap to help determine accuracy of lm fit.
+
+```{r}
+boot.fn=function(data,index){
+  return(coef(lm(mpg~horsepower,data=data,subset=index)))
+}
+
+#simply compute coefficient estimates
+boot.fn(Auto,1:392)
+
+set.seed(1)
+
+#one bootstrap round
+boot.fn(Auto,sample(392,392,replace=T))
+
+#now do a thousand!
+boot(Auto,boot.fn,1000)
+
+#however in the simple case of linear regression, we can also get these
+# estimates with the summary() function from the fit itself
+# as was described in section 3.1.2
+summary(lm(mpg~horsepower,data=Auto))$coef
+```
+
+Interestingly, the formula given in equation 3.8 that the summary function uses to calculate the estimate of the beta standard errors rely on certain assumptions about the underlying data. Like the population $\sigma^2$ which is estimated from the RSS. This $\sigma^2$ relies on the model being correct! The non-linear relationship in the data causes inflated residuals and an inflated $\hat\sigma^2$. Also the standard formulas assume that $x_i$ are fixed and that $\epsilon_i$ is the sole source of variability, which is weird. The bootstrap does not have these assumptions, so it is probably more accurate in its estimates of the errors around $\hat\beta_0, \hat\beta_1$.
+
+Here is an example where the model is closer to the correct one, how the boostrap and summary estimates should be closer.
+
+```{r}
+boot.fn=function(data,index){
+  coefficients(lm(mpg~horsepower+I(horsepower^2), data=data, subset=index))
+}
+
+set.seed(1)
+boot(Auto,boot.fn,1000)
+summary(lm(mpg~horsepower+I(horsepower^2),data=Auto))$coef
+```
+
+
+

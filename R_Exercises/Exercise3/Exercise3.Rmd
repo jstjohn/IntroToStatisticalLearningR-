@@ -382,8 +382,8 @@ PlotPower(1:10,3)
 ## Problem 13
 > Using the Boston data set, fit classification models in order to predict whether a given suburb has a crime rate above or below the median. Explore logistic regression, LDA, and KNN models using various subsets of the predictors. Describe your findings.
 
-```{r fig.width=11, fig.height=11}
-Boston$crim01 <- as.numeric(Boston$crim > median(Boston$crim)) 
+```{r fig.width=15, fig.height=15}
+Boston$crim01 <- as.numeric(Boston$crim > median(Boston$crim))
 # as.numeric converts FALSE to 0 and TRUE to 1
 
 set.seed(1)
@@ -393,7 +393,11 @@ train <- !test
 Boston.train <- Boston[train,]
 Boston.test <- Boston[test,]
 
-pairs(Boston.train)
+Boston.train.fact <- Boston.train
+Boston.train.fact$crim01 <- factor(Boston.train.fact$crim01)
+library(GGally)
+ggpairs(Boston.train.fact, colour='crim01')
+#pairs(Boston.train)
 
 #We should explore "black"
 # "ptratio" "rad" "dis" "nox, and "zn" "lstat" "rm"
@@ -418,8 +422,8 @@ glm.pred[glm.probs > 0.50]=1
 table(glm.pred,Boston.test$crim01)
 mean(glm.pred==Boston.test$crim01)
 
-#ptratio helps a bit
-glm.fit=glm(crim01~nox+rad+medv+age+tax+ptratio, data=Boston.train)
+#ptratio helps a bit, but the nox*dis helps quite a bit
+glm.fit=glm(crim01~nox*dis+medv:tax+rad+age, data=Boston.train)
 summary(glm.fit)
 #NOX,RAD,MEDV,AGE,TAX look good
 glm.probs=predict(glm.fit,Boston.test,type="response")
