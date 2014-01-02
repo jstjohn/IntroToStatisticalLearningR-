@@ -1,0 +1,325 @@
+Introduction to Statistical Learning Lab 5: Feature selection, subset selection, etc
+========================================================
+
+# Lab 1: Subset selection methods
+
+## Best subset selection
+```{r}
+library(ISLR)
+#fix(Hitters)
+names(Hitters)
+dim(Hitters)
+sum(is.na(Hitters$Salary))
+Hitters=na.omit(Hitters)
+sum(is.na(Hitters))
+```
+
+And now lets do best subset selection with the leaps library
+
+```{r}
+library(leaps)
+regfit.full=regsubsets(Salary~.,Hitters)
+summary(regfit.full)
+regfit.full=regsubsets(Salary~.,data=Hitters,nvmax=19)
+reg.summary=summary(regfit.full)
+names(reg.summary)
+reg.summary$rsq
+```
+
+Some r plots showing various optimal numbers of features given different penalties for overfitting.
+```{r fig.height=11,fig.width=11}
+par(mfrow=c(2,2))
+plot(reg.summary$rss,xlab="Number of Variables",ylab="RSS",type="l")
+plot(reg.summary$adjr2,xlab="Number of Variables",ylab="Adjusted RSq",type="l")
+points(which.max(reg.summary$adjr2),
+       reg.summary$adjr2[which.max(reg.summary$adjr2)],
+       col="red",cex=2,pch=20)
+plot(reg.summary$cp,xlab="Number of Variables",ylab="Cp",
+     type="l")
+points(which.min(reg.summary$cp),
+       reg.summary$cp[which.min(reg.summary$cp)],
+       col="red",cex=2,pch=20)
+plot(reg.summary$bic,xlab="Number of Variables",
+     ylab="BIC", type="l")
+points(which.min(reg.summary$bic),
+       reg.summary$bic[which.min(reg.summary$bic)],
+       col="red",cex=2,pch=20)
+```
+
+We can also do the default plots for this package which show which things were selected given different numbers of features and different penalty terms.
+```{r fig.height=11,fig.width=11}
+par(mfrow=c(2,2))
+plot(regfit.full,scale="r2")
+plot(regfit.full,scale="adjr2")
+plot(regfit.full,scale="Cp")
+plot(regfit.full,scale="bic")
+```
+
+The coeficient function can take as an argument the model (in terms of number of features) and it will output the coefficient estimates for that model.
+```{r}
+coef(regfit.full,6)
+```
+
+
+## Forward and backward stepwise selection
+
+```{r}
+regfit.fwd=regsubsets(Salary~.,data=Hitters,nvmax=19,method="forward")
+summary(regfit.fwd)
+regfit.bwd=regsubsets(Salary~.,data=Hitters,nvmax=19,method="backward")
+summary(regfit.bwd)
+coef(regfit.full,7)
+coef(regfit.fwd,7)
+coef(regfit.bwd,7)
+```
+Note how different selection methods produce different sets of data.
+
+## Choosing among models using the validation set approach and cv.
+
+```{r}
+set.seed(1)
+train=sample(c(TRUE,FALSE),nrow(Hitters),rep=TRUE)
+test=(!train)
+regfit.best=regsubsets(Salary~.,data=Hitters[train,],nvmax=19)
+test.mat=model.matrix(Salary~.,data=Hitters[test,])
+val.errors=rep(NA,19)
+for(i in 1:19){
+  coefi=coef(regfit.best,id=i)
+  pred=test.mat[,names(coefi)]%*%coefi # dot product of coeficients is the
+                                       # prediction
+  val.errors[i]=mean((Hitters$Salary[test]-pred)^2)
+}
+val.errors
+which.min(val.errors)
+coef(regfit.best,which.min(val.errors))
+```
+
+Function to do the predicting we did above
+```{r}
+predict.regsubsets=function(object,newdata,id,...){ 
+  form=as.formula(object$call[[2]]) ## extract formula
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+```
+
+
+```{r}
+regfit.best=regsubsets(Salary~.,data=Hitters,nvmax=19)
+coef(regfit.best,10)
+```
+
+
+
+### Now doing with cv
+
+```{r}
+k=10
+set.seed(1)
+folds=sample(1:k,nrow(Hitters),replace=TRUE)
+cv.errors=matrix(NA,k,19,dimnames=list(NULL,paste(1:19)))
+
+for(j in 1:k){
+  best.fit=regsubsets(Salary~.,data=Hitters[folds!=j,],nvmax=19)
+  for(i in 1:19){
+    pred=predict(best.fit,Hitters[folds==j,],id=i)
+    cv.errors[j,i]=mean((Hitters$Salary[folds==j]-pred)^2)
+  }
+}
+
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+which.min(mean.cv.errors)
+```
+So the above stores the k fold cv results in a matrix. For fold j, there are 19 optimal variable subset models to test (hence the 10X19 matrix). Now to find which performed the best, we average the error across each of the 10 cv rounds for a given number of variables that we are interested in testing in our model. Plotting these averages out, we see that 11 is the best model.
+
+```{r fig.width=7,fig.height=5}
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type='b')
+points(which.min(mean.cv.errors),mean.cv.errors[which.min(mean.cv.errors)],
+       col="red",cex=2,pch=20)
+```
+
+And now we train the best modle on all of the datas
+```{r}
+reg.best=regsubsets(Salary~.,data=Hitters,nvmax=19)
+coef(reg.best,which.min(mean.cv.errors))
+```
+
+*************************
+# Lab 2: Ridge Regression and the Lasso
+
+```{r}
+x=model.matrix(Salary~.,Hitters)[,-1]
+y=Hitters$Salary
+```
+Note that above model.matrix is being used for the side effect that it converts categorical variables into sets of dummy variables. So for example NewLeague could take on the value A and N. model.matrix took this, chose n, and made a new column called "NewLeagueN" with the binary values 0 and 1. This is required prior to running glmnet because it needs numerical /quantitative inputs.
+
+## Ridge regression
+glmnet takes the alpha argument which you can use to tell it what kind of model to fit. For example alpha=1 is a lasso model, and alpha=0 is a ridge regression model. 
+
+```{r}
+library(glmnet)
+grid=10^seq(10,-2,length=100)
+#spreads out the range 10 to -2 to 100 
+#equally spaced intermediate values
+ridge.mod=glmnet(x,y,alpha=0,lambda=grid)
+```
+
+By default glmnet does ridge regression on an automagically selected range of $\lambda$ values.
+
+Glmnet also standardizes variables which may or may not be problematic, we may want to do that ourselves first in some way for example. To turn this setting off we can do `standardize=FALSE`.
+
+The coefficients are stored in there for each value of lambda in our previous grid. So this should be a #variable by 100 matrix.
+```{r}
+dim(coef(ridge.mod))
+```
+
+for the 50th lambda we can see some info
+
+```{r}
+ridge.mod$lambda[50]
+coef(ridge.mod)[,50]
+#calculate the l2 norm by the following
+sqrt(sum(coef(ridge.mod)[-1,50]^2))
+```
+
+vs when a lower value of lambda is used, 
+```{r}
+ridge.mod$lambda[60]
+coef(ridge.mod)[,60]
+#calculate the l2 norm by the following
+sqrt(sum(coef(ridge.mod)[-1,60]^2))
+```
+
+We can use predict to get ridge regression coefficients for a new value of $\lambda=50$.
+```{r}
+predict(ridge.mod,s=50,type="coefficients")[1:20,]
+```
+
+Note how as $\lambda$ gets smaller, fewer of the coefficients are nearly 0. Basically smaller $\lambda$'s mean lower constraints and the closer the model is to ordinary least-squares.
+
+Here is another method of doing subset selection, prior we did this with a vector of TRUE/FALSE, now we do with a list of indices.
+```{r}
+set.seed(1)
+train=sample(1:nrow(x),nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+
+ridge.mod=glmnet(x[train,],y[train],alpha=0,lambda=grid,thresh=1e-12)
+ridge.pred=predict(ridge.mod,s=4,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+
+#if we fit with *only* the intercept, and no other beta coefficients
+# then the outcome would be the mean of the training data, and
+# it would just be the mean of the training cases.
+mean((mean(y[train])-y.test)^2)
+
+###
+# we can also get this with a super-high lambda value, which
+# essentially sets all betas to nearly 0.
+ridge.pred=predict(ridge.mod,s=1e10,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+
+ridge.pred=predict(ridge.mod,s=0,newx=x[test,],exact=T)
+#need to use exact to get the answer close to least-squares due to
+# numerical approximation.
+mean((ridge.pred-y.test)^2)
+lm(y~x,subset=train)
+predict(ridge.mod,s=0,exact=T,type="coefficients")[1:20,]
+```
+
+Lets use CV and do some better selection of $\lambda$
+
+```{r fig.width=7,fig.height=5}
+set.seed(1)
+cv.out=cv.glmnet(x[train,],y[train],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+```
+
+Lets see how this does on the test data!
+```{r}
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+```
+
+seems to perform better than $\lambda=4$.
+
+Let's see what the coefficients are like for the entire dataset now.
+```{r}
+out=glmnet(x,y,alpha=0)
+predict(out,type="coefficients",s=bestlam)[1:20,]
+```
+
+## The Lasso
+
+```{r fig.height=5,fig.width=7}
+lasso.mod=glmnet(x[train,],y[train],alpha=1,lambda=grid)
+plot(lasso.mod)
+```
+
+```{r fig.height=5,fig.width=7}
+cv.out=cv.glmnet(x[train,],y[train],alpha=1)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+lasso.pred=predict(lasso.mod,s=bestlam,newx=x[test,])
+mean((lasso.pred-y.test)^2)
+out=glmnet(x,y,alpha=1,lambda=grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:20,]
+lasso.coef
+lasso.coef[lasso.coef!=0]
+```
+
+Note that a bunch of the variables are exactly 0! Much easier to interpret, basically subset selection happened on the variables which is pretty awesome.
+
+The output best lasso model has only 7 variables, and discards 12!
+
+
+
+*************************
+# Lab 3: PCR and PLS Regression
+
+## Principal Components Regression
+```{r fig.height=5, fig.width=7}
+library(pls)
+set.seed(2)
+pcr.fit=pcr(Salary~., data=Hitters, scale=TRUE, validation="CV")
+summary(pcr.fit)
+
+validationplot(pcr.fit, val.type="MSEP")
+```
+
+```{r fig.height=5, fig.width=7}
+set.seed(1)
+pcr.fit=pcr(Salary~., data=Hitters, scale=TRUE, subset=train, validation="CV")
+
+validationplot(pcr.fit, val.type="MSEP")
+```
+
+
+```{r}
+pcr.pred=predict(pcr.fit,x[test,],ncomp=7)
+mean((pcr.pred-y.test)^2)
+```
+
+
+Comparable performance to ridge regression and lasso, but harder to interpret b/c doesn't give us selected variables or coefficients!
+
+```{r}
+pcr.fit=pcr(y~x,scale=TRUE,ncomp=7)
+summary(pcr.fit)
+```
+
+
+
+
+
+
+
+
