@@ -1,0 +1,514 @@
+Introduction to Statistical Learning Exercises 5:
+========================================================
+
+# Conceptual Section
+*******************
+## Problem 1
+
+*******************
+## Problem 2
+
+See section 7.5 previously on smoothing splines. A typicall smoothing spline uses the second derivative of g (the change in slope). So minimizing the second derivative of g results in less roughness of the line. The first derivative of g represents the slope. The third derivative is weird. This is the rate at which acceleration is changing in physics. It is the rate of change of the second derivative, called "jerk". Smoothing splines are like regular splines but they have a knot at every training datapoint, and they smooth the fit by minimizing this alpha term over the second derivative. 
+
+### Part a
+I think this should predict everythiing to be zero. No matter how bad the fit is, the infinite penalty of a non-zero prediction on X will overrule everything else.
+
+### Part b
+This is minimizing slope (first derivative). Basically g must be flat! So this should just be the mean of all points.
+
+### Part c
+This is minimizing change in slope (second derivative). This is allowed to be a line so it will likely be a nice linear regression fit.
+
+### Part d
+This is minimizing "jerk" the rate of change in slope. Hmm.. So the rate of change in slope is allowed to be constant, but not changing. This should be the closest you can get to fitting all points perfectly given some acceleration of line change.
+
+### Part e
+Now there is no smoothing parameter, so that part of the equation is ignored. Basically this is a set of straight lines connecting the dots!
+*******************
+
+## Problem 3
+
+## Problem 4
+
+## Problem 5
+
+
+# Applied section
+*******************
+
+## Problem 6
+
+### Part a
+```{r}
+library(ISLR)
+
+k=10
+max.poly=15
+set.seed(1)
+folds=sample(1:k,nrow(Wage),replace=TRUE)
+cv.errors=matrix(NA,k,max.poly,dimnames=list(NULL,paste(1:max.poly)))
+
+for(j in 1:k){
+  for(i in 1:max.poly){
+    lm.fit=lm(wage~poly(age,i,raw=T),data=Wage[folds!=j,])
+
+    pred=predict(lm.fit,Wage[folds==j,])
+    cv.errors[j,i]=mean((Wage$wage[folds==j]-pred)^2)
+  }
+}
+
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+which.min(mean.cv.errors)
+
+fit.1=lm(wage~poly(age,1,raw=T),data=Wage)
+fit.2=lm(wage~poly(age,2,raw=T),data=Wage)
+fit.3=lm(wage~poly(age,3,raw=T),data=Wage)
+fit.4=lm(wage~poly(age,4,raw=T),data=Wage)
+fit.5=lm(wage~poly(age,5,raw=T),data=Wage)
+fit.6=lm(wage~poly(age,6,raw=T),data=Wage)
+fit.7=lm(wage~poly(age,7,raw=T),data=Wage)
+fit.8=lm(wage~poly(age,8,raw=T),data=Wage)
+fit.9=lm(wage~poly(age,9,raw=T),data=Wage)
+fit.10=lm(wage~poly(age,10,raw=T),data=Wage)
+fit.11=lm(wage~poly(age,11,raw=T),data=Wage)
+fit.12=lm(wage~poly(age,12,raw=T),data=Wage)
+fit.13=lm(wage~poly(age,13,raw=T),data=Wage)
+fit.14=lm(wage~poly(age,14,raw=T),data=Wage)
+fit.15=lm(wage~poly(age,15,raw=T),data=Wage)
+anova(fit.1,fit.2,fit.3,fit.4,fit.5,fit.6,fit.7,fit.8,fit.9,fit.10,fit.11,fit.12,fit.13,fit.14,fit.15)
+```
+
+There appears to be support both in CV and anova for a 9th degree polynomial on age relative to wage!
+
+```{r, fig.width=11, fig.height=11}
+age.range=data.frame(age=seq(min(Wage$age),max(Wage$age),by=0.1))
+plot(Wage$age, Wage$wage, xlab="Age", ylab="Wage", main="Wage vs Age")
+lines(age.range$age,predict(fit.9,age.range),col="red",lwd=3)
+```
+
+### Part b
+```{r}
+library(ISLR)
+
+k=10
+max.cut=19
+set.seed(1)
+folds=sample(1:k,nrow(Wage),replace=TRUE)
+cv.errors=matrix(NA,k,max.cut-1,dimnames=list(NULL,paste(2:max.cut-1)))
+
+for(j in 1:k){
+  for(i in 2:max.cut){
+    lm.fit=lm(wage~cut(age,i,labels = FALSE),data=Wage[folds!=j,])
+
+    pred=predict(lm.fit,newdata=Wage[folds==j,])
+    cv.errors[j,i-1]=mean((Wage$wage[folds==j]-pred)^2)
+  }
+}
+
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+mean.cv.errors[which.min(mean.cv.errors)]
+
+fit.2=lm(wage~cut(age,2),data=Wage)
+fit.3=lm(wage~cut(age,3),data=Wage)
+fit.4=lm(wage~cut(age,4),data=Wage)
+fit.5=lm(wage~cut(age,5),data=Wage)
+fit.6=lm(wage~cut(age,6),data=Wage)
+fit.7=lm(wage~cut(age,7),data=Wage)
+fit.8=lm(wage~cut(age,8),data=Wage)
+fit.9=lm(wage~cut(age,9),data=Wage)
+fit.10=lm(wage~cut(age,10),data=Wage)
+fit.11=lm(wage~cut(age,11),data=Wage)
+fit.12=lm(wage~cut(age,12),data=Wage)
+fit.13=lm(wage~cut(age,13),data=Wage)
+fit.14=lm(wage~cut(age,14),data=Wage)
+fit.15=lm(wage~cut(age,15),data=Wage)
+fit.16=lm(wage~cut(age,16),data=Wage)
+fit.17=lm(wage~cut(age,17),data=Wage)
+fit.18=lm(wage~cut(age,18),data=Wage)
+anova(fit.2,fit.3,fit.4,fit.5,fit.6,fit.7,fit.8,fit.9,fit.10,fit.11,fit.12,fit.13,fit.14,fit.15,fit.16,fit.17,fit.18)
+```
+
+There appears to be optimal support for 6 cutpoints in CV and up to 15 cutpoints in anova. I will plot both, red is the 6 cutpoints, and blue is 15.
+
+```{r, fig.width=11, fig.height=11}
+age.range=data.frame(age=seq(min(Wage$age),max(Wage$age),by=0.1))
+plot(Wage$age, Wage$wage, xlab="Age", ylab="Wage", main="Wage vs Age")
+lines(age.range$age,predict(fit.6,age.range),col="red",lwd=3)
+lines(age.range$age,predict(fit.15,age.range),col="blue",lwd=3)
+```
+
+
+
+
+
+## Problem 7
+Here I will use a gam function
+
+```{r,fig.width=11,fig.height=11}
+pairs(wage~age+jobclass+maritl,data=Wage)
+```
+
+```{r}
+library(gam)
+gam.m0=gam(wage~lo(year,span=0.7)+s(age,5)+education,data=Wage)
+gam.m1=gam(wage~lo(year,span=0.7)+s(age,5)+education+jobclass,data=Wage)
+gam.m2=gam(wage~lo(year,span=0.7)+s(age,5)+education+maritl,data=Wage)
+gam.m3=gam(wage~lo(year,span=0.7)+s(age,5)+education+jobclass+maritl,data=Wage)
+anova(gam.m0,gam.m1,gam.m2,gam.m3,test="F")
+anova(gam.m1,gam.m3,test="F")
+```
+
+It seems that together jobclass and marital status provide useful information beyond what you get from year, age, and education alone.
+
+```{r,fig.width=11,fig.height=11}
+par(mfrow=c(3,3))
+plot(gam.m3,se=T,col="blue")
+```
+
+********
+## Problem 8
+
+```{r fig.width=11,fig.height=11}
+pairs(Auto)
+gam.m0=gam(mpg~displacement+acceleration+year,data=Auto)
+gam.m1=gam(mpg~s(displacement,5)+s(acceleration,3)+year,data=Auto)
+gam.m2=gam(mpg~s(displacement,5)+s(acceleration,4)+year,data=Auto)
+anova(gam.m0,gam.m1,gam.m2)
+```
+
+There is pretty strong support for a non-linear relationship in the anova test. We can visually see this non-linearity in the scatterplot matrix. Year appears pretty linear though.
+
+```{r fig.width=11,fig.height=5}
+par(mfrow=c(1,3))
+plot(gam.m1,se=T,col="red")
+```
+
+***********
+## Problem 9
+### Part a
+```{r fig.width=7, fig.height=5}
+library(MASS)
+gam.fit0=lm(nox~poly(dis,3,raw=T),data=Boston)
+r=range(Boston$dis)
+d.grid=seq(r[1],r[2],by=(r[2]-r[1])/200)
+preds=predict(gam.fit0,newdata=list(dis=d.grid),se=T)
+se.bands=cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+plot(Boston$dis,Boston$nox,xlab="weighted mean distance to employment",ylab="nitrogen oxides concentration",col="lightgrey")
+lines(d.grid,preds$fit,lwd=2,col="blue")
+matlines(d.grid,se.bands,lwd=1,col="blue",lty=3)
+points(jitter(Boston$dis),rep(max(Boston$nox),nrow(Boston)),cex=.5,pch="|",col="darkgrey")
+  points(rep(max(Boston$dis),nrow(Boston)),jitter(Boston$nox),cex=.5,pch="-",col="darkgrey")
+title("Cubic relationship between mean distance to employment\nand nitrogen oxide contamination")
+```
+### Part b
+> Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
+
+```{r fig.height=11, fig.width=11}
+par(mfrow=c(4,3))
+for(i in seq(1,12)){
+  gam.fit=lm(nox~poly(dis,i,raw=T),data=Boston)
+  preds=predict(gam.fit,newdata=list(dis=d.grid),se=T)
+  pred.fit=predict(gam.fit,newdata=Boston)
+  se.bands=cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+  rss=sum((Boston$nox-pred.fit)^2)
+  plot(Boston$dis,Boston$nox,xlab="dis",ylab="nox",col="lightgrey",main=sprintf("Poly=%d, rss=%0.6f",i,rss))
+  lines(d.grid,preds$fit,lwd=2,col="blue")
+  matlines(d.grid,se.bands,lwd=1,col="blue",lty=3)
+  points(jitter(Boston$dis),rep(max(Boston$nox),nrow(Boston)),cex=.5,pch="|",col="darkgrey")
+  points(rep(max(Boston$dis),nrow(Boston)),jitter(Boston$nox),cex=.5,pch="-",col="darkgrey")
+}
+```
+
+### Part c
+
+
+```{r}
+k=10
+max.poly=12
+set.seed(1)
+folds=sample(1:k,nrow(Boston),replace=TRUE)
+cv.errors=matrix(NA,k,max.poly,dimnames=list(NULL,paste(1:max.poly)))
+
+for(j in 1:k){
+  for(i in 1:max.poly){
+    gam.fit=lm(nox~poly(dis,i,raw=T),data=Boston[folds!=j,])
+
+    pred=predict(gam.fit,Boston[folds==j,])
+    cv.errors[j,i]=mean((Boston$nox[folds==j]-pred)^2)
+  }
+}
+
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+mean.cv.errors[which.min(mean.cv.errors)]
+
+```
+
+
+
+The minimal mean of mean squared errors is with a 4th degree polynomial through our CV iterations.
+
+
+### Part d
+```{r}
+gam.fit=lm(nox~bs(dis,df=4),data=Boston)
+  preds=predict(gam.fit,newdata=list(dis=d.grid),se=T)
+  pred.fit=predict(gam.fit,newdata=Boston)
+  se.bands=cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+  rss=sum((Boston$nox-pred.fit)^2)
+  plot(Boston$dis,Boston$nox,xlab="dis",ylab="nox",col="lightgrey",main=sprintf("Df=%d, rss=%0.6f",4,rss))
+  lines(d.grid,preds$fit,lwd=2,col="blue")
+  matlines(d.grid,se.bands,lwd=1,col="blue",lty=3)
+  points(jitter(Boston$dis),rep(max(Boston$nox),nrow(Boston)),cex=.5,pch="|",col="darkgrey")
+  points(rep(max(Boston$dis),nrow(Boston)),jitter(Boston$nox),cex=.5,pch="-",col="darkgrey")
+```
+
+Here I include the intercept in the bases so that the line fits the data in its raw form.
+
+### Part e
+
+```{r fig.width=11,fig.height=11}
+par(mfrow=c(3,3))
+for(i in seq(3,11)){
+  #add one for the intercept
+  gam.fit=lm(nox~bs(dis,df=i),data=Boston)
+  preds=predict(gam.fit,newdata=list(dis=d.grid),se=T)
+  pred.fit=predict(gam.fit,newdata=Boston)
+  se.bands=cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+  rss=sum((Boston$nox-pred.fit)^2)
+  plot(Boston$dis,Boston$nox,xlab="dis",ylab="nox",col="lightgrey",main=sprintf("DF=%d, rss=%0.6f",i,rss))
+  lines(d.grid,preds$fit,lwd=2,col="blue")
+  matlines(d.grid,se.bands,lwd=1,col="blue",lty=3)
+  points(jitter(Boston$dis),rep(max(Boston$nox),nrow(Boston)),cex=.5,pch="|",col="darkgrey")
+  points(rep(max(Boston$dis),nrow(Boston)),jitter(Boston$nox),cex=.5,pch="-",col="darkgrey")
+}
+```
+
+The results start getting pretty noisy looking around 10 degrees of freedom, I bet the best results will be around 4 or 5 degrees of freedom in CV validation.
+
+
+```{r}
+k=10
+max.df=12
+set.seed(1)
+folds=sample(1:k,nrow(Boston),replace=TRUE)
+cv.errors=matrix(NA,k,max.df-2,dimnames=list(NULL,paste(3:max.df)))
+
+for(j in 1:k){
+  for(i in 3:max.df){
+    gam.fit=lm(nox~bs(dis,df=i),data=Boston[folds!=j,])
+
+    pred=predict(gam.fit,Boston[folds==j,])
+    cv.errors[j,i-2]=mean((Boston$nox[folds==j]-pred)^2)
+  }
+}
+
+mean.cv.errors=apply(cv.errors,2,mean)
+mean.cv.errors
+mean.cv.errors[which.min(mean.cv.errors)]
+
+```
+
+As I suspected 5 was chosen by CV as the optimal degree of freedom. 
+
+**********
+## Problem 10
+
+### Part a
+```{r fig.width=11,fig.height=11}
+library(leaps)
+set.seed(1)
+test=sample(1:nrow(College),nrow(College)/4)
+train=(-test)
+College.test=College[test,,drop=F]
+College.train=College[train,,drop=F]
+
+#predict Outstate using other variables
+regfit.fwd=regsubsets(Outstate~.,data=College.train,nvmax=ncol(College)+1,method="forward")
+reg.summary=summary(regfit.fwd)
+
+par(mfrow=c(2,2))
+plot(reg.summary$rss,xlab="Number of Variables",ylab="RSS",type="l")
+plot(reg.summary$adjr2,xlab="Number of Variables",ylab="Adjusted RSq",type="l",main=sprintf("Max Adjusted RSq: %d",which.max(reg.summary$adjr2)))
+points(which.max(reg.summary$adjr2),
+       reg.summary$adjr2[which.max(reg.summary$adjr2)],
+       col="red",cex=2,pch=20)
+plot(reg.summary$cp,xlab="Number of Variables",ylab="Cp",
+     type="l",main=sprintf("Min Cp: %d",which.min(reg.summary$cp)))
+points(which.min(reg.summary$cp),
+       reg.summary$cp[which.min(reg.summary$cp)],
+       col="red",cex=2,pch=20)
+plot(reg.summary$bic,xlab="Number of Variables",
+     ylab="BIC", type="l",main=sprintf("Min BIC: %d",which.min(reg.summary$bic)))
+points(which.min(reg.summary$bic),
+       reg.summary$bic[which.min(reg.summary$bic)],
+       col="red",cex=2,pch=20)
+
+reg.summary
+```
+
+### Part b
+
+The 12 feature model that BIC choses seems to be pretty good.
+
+This model uses the following features:
+
+* Private
+* Accept
+* Top10perc
+* F.Undergrad
+* Room.Board
+* Personal
+* PhD
+* Terminal
+* S.F.Ratio
+* perc.alumni
+* Expend
+* Grad.Rate
+
+```{r fig.width=11,fig.height=11}
+good.features=c("Outstate",
+                "Private",
+                "Accept",
+                "Top10perc",
+                "F.Undergrad",
+                "Room.Board",
+                "Personal",
+                "PhD",
+                "Terminal",
+                "S.F.Ratio",
+                "perc.alumni",
+                "Expend",
+                "Grad.Rate")
+
+pairs(College.train[,good.features,drop=F])
+
+#standard lm fit using these features for comparison
+lm.fit=lm(Outstate~.,data=College.train[,good.features])
+
+```
+
+The highly non-linear features by eye relative to the response seem to be Accept, F.Undergrad, and Top10perc. PhD might be anotehr good candidate, and perhaps Terminal.
+
+```{r fig.width=11,fig.height=11}
+gam.fit=gam(Outstate~
+             ns(Accept,5)+
+             ns(Top10perc,3)+
+             ns(F.Undergrad,5)+
+             ns(PhD,3)+
+             ns(Terminal,3)+
+             Private +
+             Room.Board + 
+             Personal + 
+             S.F.Ratio + 
+             perc.alumni +
+             Expend +
+             Grad.Rate
+             ,data=College.train)
+anova(lm.fit,gam.fit)
+
+par(mfrow=c(4,3))
+plot.gam(gam.fit,se=T,residuals=T,col="blue")
+
+summary(lm.fit)
+summary(gam.fit)
+
+
+gam.pred=predict(gam.fit,newdata=College.test)
+lm.pred=predict(lm.fit,newdata=College.test)
+
+sqrt(mean((College.test$Outstate-gam.pred)^2))
+sqrt(mean((College.test$Outstate-lm.pred)^2))
+```
+
+The root mean squared error is lower for the GAM than the standard linear model. I used the features described previosly to test out non-linear relationships.
+
+
+## Problem 11
+
+```{r fig.width=11, fig.height=5}
+n=100
+beta0_t=5
+beta1_t=-0.55
+beta2_t=1.35
+set.seed(10)
+x1=rnorm(n,sd=1.1)
+x2=rnorm(n,sd=2.3)
+e=rnorm(n,mean=0,sd=0.5)
+y=x1*beta1_t+x2*beta2_t+beta0_t+e
+
+res=matrix(NA,3,1000,dimnames=list(c("B0","B1","B2"),paste(1:1000)))
+
+b0hat=150
+b1hat=100
+b2hat=-100
+
+for(i in seq(1000)){
+  a=y-b1hat*x1
+  b2hat=lm(a~x2)$coef[2]
+  a=y-b2hat*x2
+  fit2=lm(a~x1)
+  b1hat=fit2$coef[2]
+  b0hat=fit2$coef[1]
+  res["B0",i]=b0hat
+  res["B1",i]=b1hat
+  res["B2",i]=b2hat
+}
+
+res[,c(1,2,3,4,5,6,7,8,9,1000),drop=F]
+
+r=range(res)
+plot(seq(1000),res[1,],type="l",lwd=3,ylim=r,col="blue",xlab="iteration",ylab="coefficient estimate")
+lines(res[2,],lwd=3,col="red")
+lines(res[3,],lwd=3,col="green")
+legend("topright", 
+c("B0","B1","B2"), # puts text in the legend 
+lty=c(1,1,1), # gives the legend appropriate symbols (lines)
+lwd=c(3,3,3),col=c("blue","red","green")) # gives the legend lines the correct color and width
+fit=lm(y~x1+x2)
+abline(h=fit$coef[1],lty=3,lwd=1,col="blue")
+abline(h=fit$coef[2],lty=3,lwd=1,col="red")
+abline(h=fit$coef[3],lty=3,lwd=1,col="green")
+summary(lm(y~x1+x2))
+
+```
+
+In this dataset by the 3rd iteration results were nearly as good as they would get, and by the fourth they were pretty much converged.
+
+*******
+## Problem 12
+
+```{r fig.width=11, fig.height=5}
+n=100
+p=100
+set.seed(5)
+bhats=rnorm(101,sd=100)
+btarg=rnorm(101,sd=10)
+X=cbind(rep(0,100),matrix(rnorm(100*100),100,100))
+e=rnorm(n,mean=0,sd=0.5)
+res=matrix(NA,101,1000,dimnames=list(paste(0:100),paste(1:1000)))
+
+## rows from left dot product with columns from right
+y=as.vector(btarg%*% t(X))+e
+for(i in seq(1000)){
+  for (j in 2:101){
+    a=y-as.vector((bhats[-j]%*% t(X[,-j])))
+    bhats[j]=lm(a~X[,j,drop=T])$coef[2]
+  }
+  bhats[1]=mean(y-as.vector(bhats[-1]%*% t(X[,-1])))
+  res[,i]=bhats
+}
+
+rmse_betas=apply(res,2,function(c)mean(sqrt((btarg-c)^2)))
+
+plot(1:1000,rmse_betas,type="l",col="blue",lwd=2,main="Beta RMSE by iteration",xlab="iteration",ylab="Coefficient RMSE")
+
+which.min(rmse_betas)
+min(rmse_betas)
+
+```
+
+As you can see, the RMSE on the betas is decreasing as a function of the iteration. The minimal value is at iteration 1000 (I stopped it there due to runtime), and it decreases slowly but steadily until then.
+

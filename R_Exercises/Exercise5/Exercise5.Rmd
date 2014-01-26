@@ -237,7 +237,7 @@ dat=data.frame(Y=Y,X=X)
 library(leaps)
 library(ISLR)
 
-regfit.full=regsubsets(Y~poly(X,10),data=dat,nvmax=10)
+regfit.full=regsubsets(Y~poly(X,10,raw=T),data=dat,nvmax=10)
 reg.summary=summary(regfit.full)
 ```
 
@@ -261,19 +261,17 @@ points(which.min(reg.summary$bic),
 
 # BIC
 coef(regfit.full,3)
-# Cp
+# Cp/adjusted R2
 coef(regfit.full,4)
-# Adjusted R2
-coef(regfit.full,5)
 ```
 
-Each method chose at least a superset of the correct X polynomials. BIC chose the correct ones (X,X^2,X^3). Cp added in X^9, while Adjusted R2 added in X^9 and X^10 in addition.
+Each method chose at least a superset of the correct X polynomials. BIC chose the correct ones (X,X^2,X^3). Cp and adjusted R^2 added in X^9
 
 
 ### Part d
 
 ```{r fig.height=11,fig.width=11}
-regfit.full=regsubsets(Y~poly(X,10),data=dat,nvmax=10,method="forward")
+regfit.full=regsubsets(Y~poly(X,10,raw=T),data=dat,nvmax=10,method="forward")
 reg.summary=summary(regfit.full)
 
 par(mfrow=c(2,2))
@@ -298,10 +296,10 @@ coef(regfit.full,3)
 # Cp
 coef(regfit.full,4)
 # Adjusted R2
-coef(regfit.full,5)
+coef(regfit.full,4)
 ```
 
-The same number of parameters were chosen by each method, however now the spurious parameters changed with Cp and Adjusted R2. Now Cp uses X^5 as the extra, and Adjusted R2 uses X^4 and X^5. 
+The same number of parameters were chosen by each method, however now the spurious parameters changed with Cp and Adjusted R2. Now Cp and adjusted R^2 use X^5 as the extra.
 
 
 ### Part e
@@ -309,7 +307,7 @@ The same number of parameters were chosen by each method, however now the spurio
 
 ```{r fig.height=5,fig.width=7}
 library(glmnet)
-dat.mat=model.matrix(Y~poly(X,10),data=dat)[,-1]
+dat.mat=model.matrix(Y~poly(X,10,raw=T),data=dat)[,-1]
 
 cv.out=cv.glmnet(dat.mat,Y,alpha=1)
 plot(cv.out)
@@ -321,7 +319,7 @@ coef(lasso.mod)
 
 ```
 
-Using the optimal lambda chosen by CV, lasso regression choses up to a 3nd degree polynomial (X,X^2,X^3), which is the correct model on the underlying data.
+Using the optimal lambda chosen by CV, lasso regression choses up to a 3nd degree polynomial (X,X^2,X^3), but includes X^5 as an extra term.
 
 ### Part f
 > redo with different model and repeat c and e.
@@ -341,7 +339,7 @@ dat=data.frame(Y=Y,X=X)
 ```
 
 ```{r fig.height=11,fig.width=11}
-regfit.full=regsubsets(Y~poly(X,10),data=dat,nvmax=10)
+regfit.full=regsubsets(Y~poly(X,10,raw=T),data=dat,nvmax=10)
 reg.summary=summary(regfit.full)
 
 par(mfrow=c(2,2))
@@ -361,13 +359,19 @@ points(which.min(reg.summary$bic),
        reg.summary$bic[which.min(reg.summary$bic)],
        col="red",cex=2,pch=20)
 
-# all methods
-coef(regfit.full,7)
+# adj R^2
+coef(regfit.full,4)
+
+# Cp
+coef(regfit.full,2)
+
+# BIC
+coef(regfit.full,1)
 ```
 
 ```{r fig.height=5,fig.width=7}
 library(glmnet)
-dat.mat=model.matrix(Y~poly(X,10),data=dat)[,-1]
+dat.mat=model.matrix(Y~poly(X,10,raw=T),data=dat)[,-1]
 
 cv.out=cv.glmnet(dat.mat,Y,alpha=1)
 plot(cv.out)
@@ -379,7 +383,11 @@ coef(lasso.mod)
 
 ```
 
-This model was difficult for the methods to deal with. They both chose to include X^1...7 in the best model, despite the fact that X^7 was the only one used.
+This model was difficult for the methods to deal with. BIC chose the correct model though, with the seventh degree polynomial being the only one included! Cp added in X^2, and adjusted R^2 added in X^1, X^2, and X^3.
+
+The lasso on the ohter hand chose two features as well, like Cp. It chose X^7 along with X^9 as the spurious feature though.
+
+**NOTE: I redid this section after realizing in the next chapter that the poly function returns a linear combination of terms, which has the interesting effect of causing the above models to chose $\beta^{1..7}$ rather than only $\beta^7$!! This is something to be aware of, and I completely missed this the first time though.**
 
 
 ***************

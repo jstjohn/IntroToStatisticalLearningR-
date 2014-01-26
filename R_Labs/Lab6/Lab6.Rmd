@@ -1,0 +1,245 @@
+Introduction to Statistical Learning Lab 6
+========================================================
+
+## Polynomial regression and step functions (and rug plots!)
+```{r}
+library(ISLR)
+attach(Wage)
+fit=lm(wage~poly(age,4),data=Wage)
+coef(summary(fit))
+```
+
+But this does a linear combination of the polynomials, not the raw polynomials! This is orthoganal though, so it is a different basis and the overal fit will be equivalent, but it does result in different coefficients!
+
+```{r}
+library(ISLR)
+attach(Wage)
+fit2=lm(wage~poly(age,4,raw=T),data=Wage)
+coef(summary(fit2))
+
+# or alternatively
+fit2a=lm(wage~age+I(age^2)+I(age^3)+I(age^4))
+coef(fit2a)
+
+#and a third way!
+fit2b=lm(wage~cbind(age,age^2,age^3,age^4))
+coef(fit2b)
+
+
+##
+# get predictions for a range of ages and std errors around those
+# predictions
+agelims=range(age) #returns the range of this list (2 values), lower->upper
+age.grid=seq(from=agelims[1],to=agelims[2])
+preds=predict(fit,newdata=list(age=age.grid),se=TRUE)
+se.bands=cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+```
+
+```{r,fig.width=11,fig.height=5}
+par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
+plot(age,wage,xlim=agelims,cex=0.5,col="darkgrey")
+title("Degree-4 Polynomial", outer=T)
+lines(age.grid,preds$fit,lwd=2,col="blue")
+matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
+```
+
+Note that the right panel of this figure will be filled in later.
+
+
+```{r}
+##nearly identical predictions from orthogonal and raw data
+preds2=predict(fit2,newdata=list(age=age.grid),se=TRUE)
+max(abs(preds$fit-preds2$fit))
+```
+
+
+One way to decide which degree of polynomial to use is with a hypothesis test. Note that this requires that the models are nested for anova to be the same as the results we get out of the summary function to the lm fit. Anova is more general though.
+
+```{r}
+fit.1=lm(wage~age,data=Wage)
+fit.2=lm(wage~poly(age,2),data=Wage)
+fit.3=lm(wage~poly(age,3),data=Wage)
+fit.4=lm(wage~poly(age,4),data=Wage)
+fit.5=lm(wage~poly(age,5),data=Wage)
+
+anova(fit.1,fit.2,fit.3,fit.4,fit.5)
+
+#alternatively we could just have looked at the p values on the coefficients for the 5th degree model.
+coef(summary(fit.5))
+
+
+## more general anova test
+fit.1=lm(wage~education+age,data=Wage)
+fit.2=lm(wage~education+poly(age,2),data=Wage)
+fit.3=lm(wage~education+poly(age,3),data=Wage)
+anova(fit.1,fit.2,fit.3)
+```
+
+Lets move on to predict which people make more than 250k.
+```{r}
+fit=glm(I(wage>250)~poly(age,4),data=Wage,family=binomial)
+preds3=predict(fit,newdata=list(age=age.grid),se=T)
+
+## Need to transform the SE estimates, we have a fit to a logit
+pfit=exp(preds3$fit)/(1+exp(preds3$fit))
+se.bands.logit=cbind(preds3$fit+2*preds3$se.fit, preds3$fit-2*preds3$se.fit)
+se.bands2=exp(se.bands.logit)/(1+exp(se.bands.logit))
+
+#alternatively we could have gotten this directly by saying
+# type="response" to the predict function:
+#preds=predict(fit,newdata=list(age=age.grid),type="response",se=T)
+# however in this case the confidence intervals are not sensible because 
+# they should represent probabilities but can come out negative! 
+# With the above transformation this is not an issue, and the probabilities
+# remain well behaved.
+```
+
+Now for the full figure 7.1 plot
+```{r,fig.width=11,fig.height=5}
+#previous section
+par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
+plot(age,wage,xlim=agelims,cex=0.5,col="darkgrey")
+title("Degree-4 Polynomial (matching fig 7.1)", outer=T)
+lines(age.grid,preds$fit,lwd=2,col="blue")
+matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
+
+#new data for prediction of income over 250k
+plot(age,I(wage>250),xlim=agelims,type="n",ylim=c(0,.2))
+#add in density ticks (jitter helps with this) at top and bottom of panel (0 and 0.2 look good I guess)
+points(jitter(age),I((wage>250)/5),cex=.5,pch="|",col="darkgrey")
+
+#add in probability of being a really high wage earner, along with
+# std error on this polynomial logistic regression probability fit.
+lines(age.grid,pfit,lwd=2,col="blue")
+matlines(age.grid,se.bands2,lwd=1,col="blue",lty=3)
+```
+
+Note the above plot type is often called a "rug plot"
+
+
+Step functions can be fit with the cut function
+
+```{r}
+table(cut(age,4))
+fit=lm(wage~cut(age,4),data=Wage)
+coef(summary(fit))
+```
+
+NOTE:
+> The age<33.5 category is left out, so the intercept coefficient of $94,160 can be interpreted as the average salary for those under 33.5 years of age, and the other coefficients can be interpreted as the average additional salary for those in the other age groups. We can produce predictions and plots just as we did in the case of the polynomial fit.
+
+## Splines
+
+```{r fig.height=5,fig.width=7}
+library(splines)
+fit=lm(wage~bs(age,knots=c(25,40,60)),data=Wage)
+pred=predict(fit,newdata=list(age=age.grid),se=T)
+plot(age,wage,col="gray")
+lines(age.grid,pred$fit,lwd=2)
+lines(age.grid,pred$fit+2*pred$se,lty="dashed")
+lines(age.grid,pred$fit-2*pred$se,lty="dashed")
+dim(bs(age,knots=c(25,40,60)))#or specified specifically
+dim(bs(age,df=6))#knots can be chosen automagically at uniform quantiles in the data
+attr(bs(age,df=6),"knots")
+fit2=lm(wage~ns(age,df=4),data=Wage)
+pred2=predict(fit2,newdata=list(age=age.grid),se=T)
+lines(age.grid,pred2$fit,col="red",lwd=2)
+lines(age.grid,pred2$fit+2*pred2$se,col="red",lty="dashed")
+lines(age.grid,pred2$fit-2*pred2$se,col="red",lty="dashed")
+```
+
+### Smooth.spline, and figure 7.8 replication:
+
+```{r fig.height=5,fig.width=7}
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
+title("Smoothing Spline")
+fit=smooth.spline(age,wage,df=16)
+fit2=smooth.spline(age,wage,cv=TRUE)
+fit2$df
+lines(fit,col="red",lwd=2)
+lines(fit2,col="blue",lwd=2)
+legend("topright",legend=c("16 DF",sprintf("%.1f DF",fit2$df)),
+       col=c("red","blue"),lty=1,lwd=2,cex=.8)
+```
+
+### LOESS-- local regression.
+
+```{r fig.height=5,fig.width=7}
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
+title("Local Regression")
+fit=loess(wage~age,span=.2,data=Wage)
+fit2=loess(wage~age,span=.5,data=Wage)
+lines(age.grid,predict(fit,data.frame(age=age.grid)),
+      col="red",lwd=2)
+lines(age.grid,predict(fit2,data.frame(age=age.grid)),
+      col="blue",lwd=2)
+legend("topright",legend=c("Span=0.2","Span=0.5"),
+       col=c("red","blue"),lty=1,lwd=2,cex=.8)
+#Span is the percent of the data used
+```
+
+## GAMs
+
+Figure 7.11
+```{r fig.width=11, fig.height=5}
+library(gam)
+gam1=lm(wage~ns(year,4)+ns(age,5)+education,data=Wage)
+gam.m3=gam(wage~s(year,4)+s(age,5)+education,data=Wage)
+par(mfrow=c(1,3))
+plot(gam.m3,se=TRUE,col="blue")
+```
+
+Figure 7.12
+```{r fig.width=11, fig.height=5}
+par(mfrow=c(1,3))
+plot.gam(gam1,se=TRUE,col="red") #must use plot.gam since this is not
+# of the gam class, so R will not automatically call this function on the
+# gam1 object.
+```
+
+Anova to chose GAM model
+```{r}
+gam.m1=gam(wage~s(age,5)+education,data=Wage)
+gam.m2=gam(wage~year+s(age,5)+education,data=Wage)
+anova(gam.m1,gam.m2,gam.m3,test="F")
+```
+
+Looks like good evidence for including year, but linearly is sufficient. 
+
+```{r}
+summary(gam.m3) # p value is for a null of a linear relationship
+# vs a non linear relationship! COOL!
+preds=predict(gam.m2,newdata=Wage)
+head(preds)
+gam.lo=gam(wage~s(year,df=4)+lo(age,span=0.7)+education,data=Wage)
+```
+
+```{r fig.width=11,fig.height=5}
+par(mfrow=c(1,3))
+plot.gam(gam.lo,se=TRUE,col="green")
+```
+
+```{r fig.width=7, fig.height=5}
+gam.lo.i=gam(wage~lo(year,age,span=0.5)+education,data=Wage)
+library(akima)
+plot(gam.lo.i)
+```
+
+```{r fig.height=5, fig.width=11}
+gam.lr=gam(I(wage>250)~year+s(age,df=5)+education,family=binomial,data=Wage)
+par(mfrow=c(1,3))
+plot(gam.lr,se=T,col="green")
+```
+
+
+```{r}
+table(education,I(wage>250))
+```
+
+```{r fig.height=5,fig.width=11}
+par(mfrow=c(1,3))
+gam.lr.s=gam(I(wage>250)~year+s(age,df=5)+education,family=binomial,data=Wage,subset=(education!="1. < HS Grad"))
+plot(gam.lr.s,se=T,col="green")
+```
+
+
