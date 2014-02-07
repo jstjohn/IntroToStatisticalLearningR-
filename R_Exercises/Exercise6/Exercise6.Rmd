@@ -486,7 +486,7 @@ p=100
 set.seed(5)
 bhats=rnorm(101,sd=100)
 btarg=rnorm(101,sd=10)
-X=cbind(rep(0,100),matrix(rnorm(100*100),100,100))
+X=cbind(rep(1,100),matrix(rnorm(100*100),100,100))
 e=rnorm(n,mean=0,sd=0.5)
 res=matrix(NA,101,1000,dimnames=list(paste(0:100),paste(1:1000)))
 
