@@ -1,0 +1,514 @@
+ISLR Exercise 7: Decision Trees
+========================================================
+********
+********
+## Conceptual
+### Problem 1
+> Draw an example (of your own invention) of a partition of two- dimensional feature space that could result from recursive binary splitting. Your example should contain at least six regions. Draw a decision tree corresponding to this partition. Be sure to label all as- pects of your figures, including the regions R1, R2, . . ., the cutpoints t1,t2,..., and so forth.
+_Hint: Your result should look something like Figures 8.1 and 8.2._
+
+
+*****
+### Problem 2
+> It is mentioned in Section 8.2.3 that boosting using depth-one trees (or stumps) leads to an additive model: that is, a model of the form
+$$f(X)=\sum_{j=1}^pf_j(X_j).$$
+Explain why this is the case. You can begin with (8.12) in Algorithm 8.2
+
+
+*****
+### Problem 3
+> Consider the Gini index, classification error, and cross-entropy in a simple classification setting with two classes. Create a single plot that displays each of these quantities as a function of pˆm1. The x- axis should display pˆm1, ranging from 0 to 1, and the y-axis should display the value of the Gini index, classification error, and entropy.
+_Hint: In a setting with two classes, $$\hat p_{m1} = 1 - \hat p_{m2}$$. You could make this plot by hand, but it will be much easier to make in R._
+
+The Gini index
+$$G=\sum_{k=1}^K\hat p_{mk}(1 - \hat p_{mk})$$
+
+cross-entropy
+$$D=-\sum_{k=1}^K\hat p_{mk}\text{log} \hat p_{mk}$$
+
+```{r fig.width=8, fig.height=8}
+gini=function(m1){
+  return(2*(m1*(1-m1)))
+}
+
+ent=function(m1){
+  m2=1-m1
+  return(-((m1*log(m1))+(m2*log(m2))))
+}
+
+classerr=function(m1){
+  m2=1-m1
+  return(1-max(m1,m2))
+  #return(min((1-m1),m1))
+  #return(m1)
+}
+
+err=seq(0,1,by=0.01)
+c.err=sapply(err,classerr)
+g=sapply(err,gini)
+e=sapply(err,ent)
+d=data.frame(Gini.Index=g,Cross.Entropy=e)
+plot(err,c.err,type='l',col="red",xlab="m1",ylim=c(0,0.8),ylab="value")
+matlines(err,d,col=c("green","blue"))
+
+
+```
+
+*****
+### Problem 4
+> This question relates to the plots in Figure 8.12.
+
+
+*****
+#### Part a
+> Sketch the tree corresponding to the partition of the predictor space illustrated in the left-hand panel of Figure 8.12. The num- bers inside the boxes indicate the mean of Y within each region.
+
+
+*****
+#### Part b
+> Create a diagram similar to the left-hand panel of Figure 8.12, using the tree illustrated in the right-hand panel of the same figure. You should divide up the predictor space into the correct regions, and indicate the mean for each region.
+
+
+*****
+### Problem 5
+> Suppose we produce ten bootstrapped samples from a data set containing red and green classes. We then apply a classification tree to each bootstrapped sample and, for a specific value of X, produce 10 estimates of P(Class is Red|X):
+0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, and 0.75.
+There are two common ways to combine these results together into a single class prediction. One is the majority vote approach discussed in this chapter. The second approach is to classify based on the average probability. In this example, what is the final classification under each of these two approaches?
+
+First the mean probability based classification:
+`r x=c(0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75); mean(x)>0.5`
+
+Second the majority vote based classification:
+`r mean(x>0.5)>0.5`
+
+*****
+### Problem 6
+> Provide a detailed explanation of the algorithm that is used to fit a regression tree.
+
+1. First we do recursive binary splitting on the data. This is a top-down approach where recursively and greedily we find the best single partitioning of the data such that the reduction of RSS is the greatest. This process is applied to each of the split parts seperately until some minimal number of observations is present on each of the leaves.
+
+2. apply cost complexity pruning of this larger tree formed in step 1 to obtain a sequence of best subtrees as a function of a parameter, $\alpha$. Each value of $\alpha$ corresponds to a different subtree which minimizes the equation $$\sum_{m=i}^{|T|}\sum_{i:x_i\in R_m}(y_i - \hat y_{R_m})^2 + \alpha |T|$$. Here $|T|$ is the number of terminal nodes on the tree. When $\alpha=0$ we have the original tree, and as $\alpha$ increases we get a more pruned version of the tree. 
+
+3. using K-fold CV, choose $\alpha$. For each fold, repeat steps 1 and 2, and then evaluate the MSE as a function of $\alpha$ on the held out fold. Chose an $\alpha$ that minimizes the average error.
+
+4. Given the $\alpha$ chosen in step 3, return the tree calculated using the formula laid out in step 2 on the entire dataset with that chosen value of $\alhpa$.
+
+*****
+*****
+## Applied
+
+****
+### Problem 7
+> In the lab, we applied random forests to the Boston data using mtry=6 and using ntree=25 and ntree=500. Create a plot displaying the test error resulting from random forests on this data set for a more comprehensive range of values for mtry and ntree. You can model your plot after Figure 8.10. Describe the results obtained.
+
+`mtry` is the number of variables randomly sampled as candidates for each split. There are 13 variables to look at in the boston dataset. This defaults to `r sqrt(13)` for a dataset of this size.
+
+```{r fig.width=11, fig.height=11}
+library(ISLR)
+library(MASS)
+library(randomForest)
+library(tree)
+
+mtry=c(3,4,6)
+ntree=c(10,30,50,75,100,500)
+x=matrix(rep(NA,length(mtry)*length(ntree)),length(ntree),length(mtry))
+set.seed(1)
+train=sample(1:nrow(Boston), nrow(Boston)/2)
+boston.test=Boston[-train,'medv']
+
+for(i in 1:length(ntree)){
+  for(j in 1:length(mtry)){
+    rf.boston=randomForest(medv~.,data=Boston,
+                           subset=train,mtry=mtry[j],ntree=ntree[i],
+                           importance=TRUE)
+    yhat.rf=predict(rf.boston,newdata=Boston[-train,])
+    err=sqrt(mean((yhat.rf-boston.test)^2))
+    x[i,j]=err
+  }
+}
+
+cols=c("red","green","blue","orange")
+
+plot(ntree,x[,1],xlab="Number of trees",ylim=c(3,5),ylab="Test RMSE",col=cols[1],type='l')
+for(j in 2:length(mtry)){
+  lines(ntree,x[,j],col=cols[j])
+}
+legend("topright",sprintf("mtry=%g",mtry),lty = 1,col=cols)
+```
+Larger trees definitely had a slight advantage. The default choice of 4 did pretty well, and perhaps bumping up that value a bit helps even more, especially at larger numbers of trees. The default value of 4 maximixed its performance at fewer numbers of trees. Overall 6 looks like a good choice for mtry, and 500 a good choice for ntree on this dataset and train/test split.
+
+******
+### Problem 8
+> In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.
+
+
+#### Part a
+> Split the data set into a training set and a test set.
+
+```{r}
+set.seed(1)
+train=sample(1:nrow(Carseats),nrow(Carseats)/2)
+library(tree)
+Carseats.train=Carseats[train,]
+Carseats.test=Carseats[-train,]
+```
+
+#### Part b
+> Fit a regression tree to the training set. Plot the tree, and interpret the results. What test error rate do you obtain?
+
+```{r fig.width=11, fig.height=11}
+tree.carseats=tree(Sales~.,Carseats.train)
+summary(tree.carseats)
+plot(tree.carseats)
+text(tree.carseats,pretty=0)
+sales.est=predict(tree.carseats,Carseats.test)
+test.R2=1-(sum((sales.est-Carseats.test$Sales)^2)/sum((Carseats.test$Sales-mean(Carseats.test$Sales))^2))
+test.R2
+```
+
+#### Part c
+> Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test error rate?
+
+```{r fig.width=11, fig.height=11}
+cv.carseats=cv.tree(tree.carseats)
+plot(cv.carseats$size,cv.carseats$dev,type="b")
+min.carseats=which.min(cv.carseats$dev)
+#8 is min
+prune.carseats=prune.tree(tree.carseats,best=min.carseats)
+plot(prune.carseats)
+text(prune.carseats ,pretty=0)
+sales.est=predict(prune.carseats,Carseats.test)
+test.R2=1-(sum((sales.est-Carseats.test$Sales)^2)/sum((Carseats.test$Sales-mean(Carseats.test$Sales))^2))
+test.R2
+```
+
+The error rate is actually not better with the pruned tree.. interesting.
+
+#### Part d
+> Use the bagging approach in order to analyze this data. What test error rate do you obtain? Use the importance() function to determine which variables are most important.
+
+```{r fig.width=11, fig.height=11}
+library(randomForest)
+set.seed(1)
+bag.carseats=randomForest(Sales~.,data=Carseats,subset=train,
+mtry=ncol(Carseats)-1,importance =TRUE)
+importance(bag.carseats)
+varImpPlot(bag.carseats)
+sales.est=predict(bag.carseats,Carseats.test)
+test.R2=1-(sum((sales.est-Carseats.test$Sales)^2)/sum((Carseats.test$Sales-mean(Carseats.test$Sales))^2))
+test.R2
+```
+
+#### Part e
+> Use random forests to analyze this data. What test error rate do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.
+
+```{r}
+rf.carseats=randomForest(Sales~.,data=Carseats,subset=train,importance=T)
+importance(rf.carseats)
+
+mtotry=2:6
+errs=rep(NA,length(mtotry))
+for(i in 1:length(mtotry)){
+  m=mtotry[i]
+  rf.carseats=randomForest(Sales~.,data=Carseats,
+                           subset=train,mtry=mtotry[i],
+                           importance=T)
+  sales.est=predict(rf.carseats,Carseats.test)
+  test.R2=1-(sum((sales.est-Carseats.test$Sales)^2)/
+               sum((Carseats.test$Sales-
+                      mean(Carseats.test$Sales))^2))
+  errs[i]=test.R2
+}
+errs
+```
+
+
+****
+### Problem 9
+> This problem involves the OJ data set which is part of the ISLR package.
+
+
+#### Part a
+> Create a training set containing a random sample of 800 observations, and a test set containing the remaining observations.
+
+```{r}
+set.seed(10)
+train=sample(1:nrow(OJ),800)
+train.OJ=OJ[train,]
+test.OJ=OJ[-train,]
+
+```
+
+#### Part b
+> Fit a tree to the training data, with Purchase as the response and the other variables except for Buy as predictors. Use the summary() function to produce summary statistics about the tree, and describe the results obtained. What is the training error rate? How many terminal nodes does the tree have?
+
+```{r}
+tree.oj=tree(Purchase~.,data=train.OJ)
+summary(tree.oj)
+```
+
+The training error rate is 0.1625, and there are 7 terminal nodes.
+
+
+#### Part c
+> Type in the name of the tree object in order to get a detailed text output. Pick one of the terminal nodes, and interpret the information displayed.
+
+```{r}
+tree.oj
+```
+
+Node 4 shows the split which occures of LoyalCH is less first less than 0.45956 and then less than 0.276142. The predicted outcome is MM. There is a deviance of 100. Smaller values of deviance ar indicative of how pure this node is. Finally there is the probability confidence bound on this prediction.
+
+#### Part d
+> Create a plot of the tree, and interpret the results.
+
+```{r fig.width=11, fig.height=11}
+plot(tree.oj)
+text(tree.oj,pretty=0)
+```
+
+#### Part e
+> Predict the response on the test data, and produce a confusion matrix comparing the test labels to the predicted test labels. What is the test error rate?
+
+```{r}
+preds=predict(tree.oj,test.OJ,type="class")
+table(test.OJ$Purchase,preds)
+test.err=(155+66)/(155+22+27+66)
+test.err
+```
+
+#### Part f
+> Apply the cv.tree() function to the training set in order to determine the optimal tree size.
+
+```{r}
+cv.oj=cv.tree(tree.oj,FUN=prune.misclass)
+```
+
+#### Part g
+> Produce a plot with tree size on the x-axis and cross-validated classification error rate on the y-axis.
+
+```{r fig.width=11, fig.height=11}
+plot(cv.oj$size ,cv.oj$dev ,type="b")
+```
+
+
+#### Part h
+> Which tree size corresponds to the lowest cross-validated classification error rate?
+
+```{r}
+msize=cv.oj$size[which.min(cv.oj$dev)]
+msize
+```
+
+#### Part i
+> Produce a pruned tree corresponding to the optimal tree size obtained using cross-validation. If cross-validation does not lead to selection of a pruned tree, then create a pruned tree with five terminal nodes.
+
+```{r}
+prune.oj=prune.misclass(tree.oj,best=msize)
+```
+
+#### Part j
+> Compare the training error rates between the pruned and un- pruned trees. Which is higher?
+
+```{r}
+
+prune.pred=predict(prune.oj,test.OJ,type="class")
+table(prune.pred,test.OJ$Purchase)
+```
+
+
+#### Part k
+> Compare the test error rates between the pruned and unpruned trees. Which is higher?
+
+```{r}
+prune.test.err=(151+68)/(151+68+26+25)
+1-prune.test.err
+1-test.err
+```
+
+The classification accurazy is slightly worse in the pruned tree.
+
+****
+### Problem 10
+> We now use boosting to predict Salary in the Hitters data set.
+
+#### Part a
+> Remove the observations for whom the salary information is unknown, and then log-transform the salaries.
+
+```{r}
+H=Hitters[!is.na(Hitters$Salary),,drop=F]
+H$Salary=log(H$Salary)
+```
+
+
+#### Part b
+> Create a training set consisting of the first 200 observations, and a test set consisting of the remaining observations.
+
+```{r}
+H.train=H[1:200,]
+H.test=H[201:nrow(H),]
+```
+
+#### Part c
+> Perform boosting on the training set with 1,000 trees for a range of values of the shrinkage parameter $\lambda$. Produce a plot with different shrinkage values on the x-axis and the corresponding training set MSE on the y-axis.
+
+```{r,fig.width=7,fig.height=7}
+library(gbm)
+set.seed(1)
+shrinkage=c(0.00001,0.0001,0.001,0.01,0.1,1)
+errs=rep(NA,length(shrinkage))
+for (i in 1:length(shrinkage)){
+  s=shrinkage[i]
+  boost.H=gbm(Salary~., data=H.train, 
+                 distribution="gaussian", 
+                 n.trees=1000,
+                 shrinkage = s,
+                 interaction.depth=1,
+                 n.cores=10)
+  yhat.boost=predict(boost.H,newdata=H.train, n.trees=1000)
+  errs[i]=mean((yhat.boost-H.train$Salary)^2)
+}
+plot(log(shrinkage),errs)
+```
+
+#### Part d
+> Produce a plot with different shrinkage values on the x-axis and the corresponding test set MSE on the y-axis.
+
+```{r,fig.width=7,fig.height=7}
+library(gbm)
+set.seed(1)
+errs.test=rep(NA,length(shrinkage))
+for (i in 1:length(shrinkage)){
+  s=shrinkage[i]
+  boost.H=gbm(Salary~., data=H.train, 
+                 distribution="gaussian", 
+                 n.trees=1000,
+                 shrinkage = s,
+                 interaction.depth=1,
+                 n.cores=10)
+  yhat.boost=predict(boost.H,newdata=H.test, n.trees=1000)
+  errs.test[i]=mean((yhat.boost-H.test$Salary)^2)
+}
+plot(log(shrinkage),errs.test)
+```
+
+#### Part e
+> Compare the test MSE of boosting to the test MSE that results from applying two of the regression approaches seen in Chapters 3 and 6.
+
+```{r fig.width=11, fig.height=11}
+boost.H=gbm(Salary~., data=H.train, 
+                 distribution="gaussian", 
+                 n.trees=1000,
+                 shrinkage = shrinkage[which.min(errs)],
+                 interaction.depth=1,
+                 n.cores=10)
+
+boost.mse=errs[which.min(errs)]
+library(leaps)
+fit=regsubsets(Salary~.,data=H.train,nvmax=19)
+fit.summ=summary(fit)
+to.inc=fit.summ$which[which.min(fit.summ$cp),][2:20]
+features=c(features,"Division","Salary")
+fit.lm=lm(Salary~.,data=H.train[,colnames(H.train)%in%features])
+yhat=predict(fit.lm,H.test[,colnames(H.train)%in%features])
+best.sub=mean((yhat-H.test$Salary)^2)
+
+cols.bad=c("League","Division","NewLeague")
+n.H=model.matrix(~.,H)[,-1]
+n.H.train=n.H[1:200,]
+n.H.test=n.H[201:nrow(n.H),]
+
+library(glmnet)
+fit=cv.glmnet(n.H.train[,colnames(n.H)!="Sallary"],n.H.train[,"Salary"])
+fit=glmnet(n.H.train[,colnames(n.H)!="Sallary"],n.H.train[,"Salary"],lambda=fit$lambda.1se)
+pred=predict(fit,n.H.test[,colnames(n.H)!="Sallary"])
+best.lasso=mean((pred[,1]-H.test$Salary)^2)
+
+
+#boost
+boost.mse
+
+#Best subset lm:
+best.sub
+
+#best lasso:
+best.lasso
+
+```
+
+the lasso is the best by a really little bit on the test data, but boosting came in close.
+
+#### Part f
+> Which variables appear to be the most important predictors in the boosted model?
+
+```{r fig.width=11, fig.height=11}
+summary(boost.H)
+```
+
+CAtBat and PutOuts were the top two predictors by a lot. Next at about half of the importance was RBI and Walks.
+
+#### Part g
+> Now apply bagging to the training set. What is the test set MSE for this approach?
+
+```{r}
+library(randomForest)
+set.seed(1)
+bag.H=randomForest(Salary~.,data=H.train,
+                        mtry=ncol(H.train)-1,
+                        importance=TRUE)
+preds=predict(bag.H,newdata=H.test)
+mean((preds-H.test$Salary)^2)
+```
+
+
+**** 
+### Problem 11
+> This question uses the Caravan data set.
+
+
+#### Part a
+> Create a training set consisting of the first 1,000 observations,
+and a test set consisting of the remaining observations.
+
+```{r}
+train.C=Caravan[1:1000,]
+test.C=Caravan[1001:nrow(Caravan),]
+```
+
+
+#### Part b
+> Fit a boosting model to the training set with Purchase as the response and the other variables as predictors. Use 1,000 trees, and a shrinkage value of 0.01. Which predictors appear to be the most important?
+
+```{r fig.width=11, fig.height=11}
+boost.C=gbm(I(Purchase=="Yes")~., data=train.C, 
+                 distribution="bernoulli", 
+                 n.trees=1000,
+                 shrinkage = 0.01,
+                 interaction.depth=1,
+                 n.cores=10)
+
+summary(boost.C)
+
+The most important predictors are PPEARSAUT, MOPLHOOG and MKOOPKLA, followed pretty closely by a group of others.
+```
+
+#### Part c
+> Use the boosting model to predict the response on the test data. Predict that a person will make a purchase if the estimated probability of purchase is greater than 20 %. Form a confusion matrix. What fraction of the people predicted to make a purchase do in fact make one? How does this compare with the results obtained from applying KNN or logistic regression to this data set?
+
+```{r}
+preds=predict(boost.C,test.C,type="response",n.trees=1000)
+yhat=ifelse(preds>.2,"Yes","No")
+table(yhat,test.C$Purchase)
+#the following is the fraction of people predicted to make
+# a purchase who actually do
+34/154
+
+```
+
+**** 
+### Problem 12
+> Apply boosting, bagging, and random forests to a data set of your choice. Be sure to fit the models on a training set and to evaluate their performance on a test set. How accurate are the results compared to simple methods like linear or logistic regression? Which of these approaches yields the best performance?
+
+
+
+
