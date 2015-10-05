@@ -111,7 +111,7 @@ iv)
 predict(lm.fit, data.frame(horsepower=98), interval="confidence")
 predict(lm.fit, data.frame(horsepower=98), interval="prediction")
 ```
-The predicted mpg is 23.47. The lower and upper 95% prediction interval is 14.8 to 34.12. The 95% confidence interval is 23.97-24.96, much tighter.
+The predicted mpg is 24.47. The lower and upper 95% prediction interval is 14.8 to 34.12. The 95% confidence interval is 23.97-24.96, much tighter.
 
 #### Part b)
 ```{r fig.width=7, fig.height=5}
